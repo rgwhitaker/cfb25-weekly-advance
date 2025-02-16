@@ -31,6 +31,7 @@ def register_commands(bot)
 
     begin
       message.edit('', embed)
+      event.respond "Week advanced to #{next_week_name}, and the deadline is set to #{advance_time_str}."
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
@@ -76,6 +77,7 @@ def register_commands(bot)
       embed = create_embed(new_title, new_description, original_embed.color, EMBED_IMAGE_URL,
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
+      event.respond "Current week set to #{current_week_name} with deadline #{current_deadline}."
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
@@ -114,6 +116,7 @@ def register_commands(bot)
       embed = create_embed(original_embed.title, new_description, original_embed.color, EMBED_IMAGE_URL,
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
+      event.respond "Deadline set to #{new_deadline}."
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
