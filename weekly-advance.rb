@@ -71,11 +71,12 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   end
 
   next_week_name = weeks[current_week_index]
-  description = "@everyone 🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
+  description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
   embed = create_embed("#{next_week_name} has started!", description, 0x00FF00, embed_image_url,
                        footer_text, trophy_image_url)
 
   begin
+    week_advances_channel.send_message("@everyone")
     week_advances_channel.send_embed('', embed)
   rescue Discordrb::Errors::NoPermission
     event.respond "I don't have permission to send messages to the 'week-advances' channel. Please check my permissions."
