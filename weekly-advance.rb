@@ -53,7 +53,7 @@ def create_embed(title, description, color, image_url, footer_text, footer_icon_
 end
 
 # Helper function to get or create the week message
-def get_or_create_week_message(event)
+def get_or_create_week_message(event, store)
   week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
   return nil unless week_advances_channel
 
@@ -73,7 +73,7 @@ end
 
 # Command to advance the week
 bot.command :advance_week do |event, duration_in_hours = '48'|
-  message = get_or_create_week_message(event)
+  message = get_or_create_week_message(event, store)
   unless message
     event.respond "The 'week-advances' channel was not found or unable to create message."
     next
