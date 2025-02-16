@@ -54,18 +54,30 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
     store[:current_deadline] = advance_time_str
   end
 
-  # Create the notification message
-  message = "\"#{current_week_name}\" has started! The deadline to complete your recruiting and games is #{advance_time_str}."
+  # Get the next week name for the next advance
+  next_week_name = weeks[current_week_index]
 
-  # Send the notification message to the channel
-  event.respond message
+  # Create the embed message
+  embed = Discordrb::Webhooks::Embed.new(
+    title: "#{next_week_name} has started!",
+    description: "The deadline to complete your recruiting and games is #{advance_time_str}.",
+    color: 0x00FF00 # Green color
+  )
+
+  # Send the embed message to the channel
+  event.channel.send_embed('', embed)
 end
 
 # Command to show the current week and deadline
 bot.command :current_week do |event|
   current_week_name = weeks[current_week_index]
   current_deadline = store.transaction { store[:current_deadline] }
-  event.respond "The current week is \"#{current_week_name}\". The deadline to complete your recruiting and games is #{current_deadline}."
+  embed = Discordrb::Webhooks::Embed.new(
+    title: "Current Week: #{current_week_name}",
+    description: "The deadline to complete your recruiting and games is #{current_deadline}.",
+    color: 0x0000FF # Blue color
+  )
+  event.channel.send_embed('', embed)
 end
 
 bot.run
