@@ -30,7 +30,7 @@ def register_commands(bot)
                          FOOTER_TEXT, TROPHY_IMAGE_URL)
 
     begin
-      message.edit(embeds: [embed])
+      message.edit(content: "", embed: embed)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
