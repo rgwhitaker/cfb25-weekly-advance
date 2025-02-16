@@ -38,6 +38,12 @@ def register_commands(bot)
 
   # Command to set the current week manually
   bot.command :set_week do |event, week|
+    message = get_or_create_week_message(event, STORE)
+    unless message
+      event.respond "The 'week-advances' channel was not found or unable to create message."
+      next
+    end
+
     current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
 
     if week =~ /^\d+$/
@@ -61,11 +67,16 @@ def register_commands(bot)
     end
 
     current_week_name = WEEKS[current_week_index]
-    description = "🏈 The current week is now #{current_week_name}. 🏈"
+    current_deadline = STORE.transaction { STORE[:current_deadline] }
+    description = "🏈 The current week is now #{current_week_name}. 🏈 Deadline: #{current_deadline}."
     embed = create_embed("Week has been set!", description, 0xFF4500, EMBED_IMAGE_URL,
                          FOOTER_TEXT, TROPHY_IMAGE_URL)
 
-    event.channel.send_embed('', embed)
+    begin
+      message.edit('', embed)
+    rescue Discordrb::Errors::NoPermission
+      event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+    end
   end
 
   # Command to show the current week and deadline
@@ -78,5 +89,30 @@ def register_commands(bot)
                          FOOTER_TEXT, TROPHY_IMAGE_URL)
 
     event.channel.send_embed('', embed)
+  end
+
+  # Command to set the deadline manually
+  bot.command :set_deadline do |event, new_deadline|
+    message = get_or_create_week_message(event, STORE)
+    unless message
+      event.respond "The 'week-advances' channel was not found or unable to create message."
+      next
+    end
+
+    STORE.transaction do
+      STORE[:current_deadline] = new_deadline
+    end
+
+    current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
+    current_week_name = WEEKS[current_week_index]
+    description = "🏈 The deadline to complete your recruiting and games is #{new_deadline}. 🏈"
+    embed = create_embed("Deadline has been set!", description, 0xFFA500, EMBED_IMAGE_URL,
+                         FOOTER_TEXT, TROPHY_IMAGE_URL)
+
+    begin
+      message.edit('', embed)
+    rescue Discordrb::Errors::NoPermission
+      event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+    end
   end
 end
