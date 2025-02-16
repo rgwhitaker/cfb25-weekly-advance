@@ -1,6 +1,7 @@
 require 'discordrb'
 require 'time'
 require 'yaml/store'
+require 'active_support/time'
 
 # Define the list of possible weeks
 weeks = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "Week 8", "Week 9", "Week 10",
@@ -19,6 +20,15 @@ bot_token = 'MTM0MDczNTEyNjA4NjM1NzAzMw.GZjn0S.BZVonQancbWFhnGQ1a2zbVBTkSZiw7dq4
 
 bot = Discordrb::Commands::CommandBot.new token: bot_token, prefix: '!'
 
+# Helper function to calculate advance time while skipping Saturdays
+def calculate_advance_time(start_time, duration_in_hours)
+  advance_time = start_time + (duration_in_hours.to_i * 60 * 60)
+  while advance_time.saturday?
+    advance_time += 1.day
+  end
+  advance_time
+end
+
 # Command to advance the week
 bot.command :advance_week do |event, duration_in_hours = '48'|
   # Ensure only admins can use this command
@@ -31,15 +41,12 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   current_week_name = weeks[current_week_index]
 
   # Calculate the advance time (current time + duration_in_hours)
-  current_time = Time.now
-  advance_time = current_time + (duration_in_hours.to_i * 60 * 60)  # Duration in seconds
-  advance_time_str = advance_time.strftime('%A, %I:%M %p')  # Format as Day, time in AM/PM
+  current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
+  advance_time = calculate_advance_time(current_time, duration_in_hours)
+  advance_time_str = advance_time.strftime('%A, %I:%M %p %Z')  # Format as Day, time in AM/PM with timezone
 
   # Increment the week index
   current_week_index = (current_week_index + 1) % weeks.length
-
-  # Get the next week name for confirmation
-  next_week_name = weeks[current_week_index]
 
   # Store the new week index and deadline persistently
   store.transaction do
@@ -48,7 +55,7 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   end
 
   # Create the notification message
-  message = "The week \"#{current_week_name}\" has been advanced! The deadline to complete your games is #{advance_time_str}.\nThe week has been successfully advanced to \"#{next_week_name}\" with a deadline of #{advance_time_str}."
+  message = "\"#{current_week_name}\" has started! The deadline to complete your recruiting and games is #{advance_time_str}."
 
   # Send the notification message to the channel
   event.respond message
@@ -58,7 +65,7 @@ end
 bot.command :current_week do |event|
   current_week_name = weeks[current_week_index]
   current_deadline = store.transaction { store[:current_deadline] }
-  event.respond "The current week is \"#{current_week_name}\". The deadline to complete your games is #{current_deadline}."
+  event.respond "The current week is \"#{current_week_name}\". The deadline to complete your recruiting and games is #{current_deadline}."
 end
 
 bot.run
