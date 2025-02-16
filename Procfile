@@ -1,1 +1,1 @@
-worker: ruby weekly_advance.rb
+worker: ruby weekly-advance.rb
