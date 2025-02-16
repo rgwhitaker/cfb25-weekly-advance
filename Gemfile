@@ -1,4 +1,5 @@
 source 'https://rubygems.org'
+ruby '3.3.7'
 gem 'discordrb'
 gem 'time'
 gem 'yaml'
