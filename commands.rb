@@ -68,11 +68,13 @@ def register_commands(bot)
 
     current_week_name = WEEKS[current_week_index]
     current_deadline = STORE.transaction { STORE[:current_deadline] }
-    description = "🏈 The current week is now #{current_week_name}. 🏈 Deadline: #{current_deadline}."
-    embed = create_embed("Week has been set!", description, 0xFF4500, EMBED_IMAGE_URL,
-                         FOOTER_TEXT, TROPHY_IMAGE_URL)
+    new_title = "Week has been set!"
+    new_description = "🏈 The current week is now #{current_week_name}. 🏈 Deadline: #{current_deadline}."
 
     begin
+      embed = message.embeds.first
+      embed.title = new_title
+      embed.description = new_description
       message.edit('', embed)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
@@ -105,11 +107,11 @@ def register_commands(bot)
 
     current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
     current_week_name = WEEKS[current_week_index]
-    description = "🏈 The deadline to complete your recruiting and games is #{new_deadline}. 🏈"
-    embed = create_embed("Deadline has been set!", description, 0xFFA500, EMBED_IMAGE_URL,
-                         FOOTER_TEXT, TROPHY_IMAGE_URL)
+    new_description = "🏈 The deadline to complete your recruiting and games is #{new_deadline}. 🏈"
 
     begin
+      embed = message.embeds.first
+      embed.description = new_description
       message.edit('', embed)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
