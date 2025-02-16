@@ -76,19 +76,16 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   )
 
   # Send the embed message to the "week-advances" channel and tag @everyone
-  week_advances_channel.send_message("@everyone")
-  week_advances_channel.send_embed('', embed)
+  begin
+    week_advances_channel.send_message("@everyone")
+    week_advances_channel.send_embed('', embed)
+  rescue Discordrb::Errors::NoPermission
+    event.respond "I don't have permission to send messages to the 'week-advances' channel."
+  end
 end
 
 # Command to set the current week manually
 bot.command :set_week do |event, week|
-  # Ensure the message is posted in the "week-advances" channel
-  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
-  unless week_advances_channel
-    event.respond "The 'week-advances' channel was not found."
-    next
-  end
-
   # Check if the input is a number
   if week =~ /^\d+$/
     week_number = week.to_i
@@ -127,9 +124,8 @@ bot.command :set_week do |event, week|
     icon_url: trophy_image_url
   )
 
-  # Send the embed message to the "week-advances" channel and tag @everyone
-  week_advances_channel.send_message("@everyone")
-  week_advances_channel.send_embed('', embed)
+  # Send the embed message to the channel where the command was run
+  event.channel.send_embed('', embed)
 end
 
 # Command to show the current week and deadline
@@ -149,14 +145,8 @@ bot.command :current_week do |event|
     icon_url: trophy_image_url
   )
 
-  # Send the embed message to the "week-advances" channel and tag @everyone
-  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
-  unless week_advances_channel
-    event.respond "The 'week-advances' channel was not found."
-    next
-  end
-  week_advances_channel.send_message("@everyone")
-  week_advances_channel.send_embed('', embed)
+  # Send the embed message to the channel where the command was run
+  event.channel.send_embed('', embed)
 end
 
 bot.run
