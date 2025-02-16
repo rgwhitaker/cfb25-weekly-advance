@@ -5,7 +5,7 @@ require_relative 'helpers'
 
 def format_deadline(deadline_str)
   deadline = Time.parse(deadline_str).in_time_zone('Eastern Time (US & Canada)')
-  deadline.strftime('%A, %B %d, %Y at %I:%M %p %Z')
+  deadline.strftime('%A at %I:%M %p')
 end
 
 def register_commands(bot)
@@ -21,7 +21,7 @@ def register_commands(bot)
     current_week_name = WEEKS[current_week_index]
     current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
     advance_time = calculate_advance_time(current_time, duration_in_hours)
-    advance_time_str = advance_time.strftime('%A, %B %d, %Y at %I:%M %p %Z')
+    advance_time_str = format_deadline(advance_time.to_s)
     current_week_index = (current_week_index + 1) % WEEKS.length
 
     STORE.transaction do
@@ -94,7 +94,8 @@ def register_commands(bot)
     current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
     current_week_name = WEEKS[current_week_index]
     current_deadline = STORE.transaction { STORE[:current_deadline] }
-    description = "🏈 The deadline to complete your recruiting and games is #{current_deadline}. 🏈"
+    formatted_deadline = format_deadline(current_deadline)
+    description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈"
     embed = create_embed("Current Week: #{current_week_name}", description, 0x0000FF, EMBED_IMAGE_URL,
                          FOOTER_TEXT, TROPHY_IMAGE_URL)
 
