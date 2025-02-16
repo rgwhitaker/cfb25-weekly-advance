@@ -63,10 +63,10 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   # Get the next week name for the next advance
   next_week_name = weeks[current_week_index]
 
-  # Create the embed message with football emojis, footer, and image
+  # Create the embed message with football emojis, footer, image, and @everyone mention
   embed = Discordrb::Webhooks::Embed.new(
     title: "#{next_week_name} has started!",
-    description: "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈",
+    description: "@everyone 🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈",
     color: 0x00FF00, # Green color
     image: Discordrb::Webhooks::EmbedImage.new(url: embed_image_url)
   )
@@ -75,9 +75,8 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
     icon_url: trophy_image_url
   )
 
-  # Send the embed message to the "week-advances" channel and tag @everyone
+  # Send the embed message to the "week-advances" channel
   begin
-    week_advances_channel.send_message("@everyone")
     week_advances_channel.send_embed('', embed)
   rescue Discordrb::Errors::NoPermission
     event.respond "I don't have permission to send messages to the 'week-advances' channel."
