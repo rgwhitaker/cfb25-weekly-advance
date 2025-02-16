@@ -6,7 +6,7 @@ require 'active_support/time'
 # Define the list of possible weeks
 weeks = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "Week 8", "Week 9", "Week 10",
          "Week 11", "Week 12", "Week 13", "Week 14", "Week 15", "Week 16", "Conference Championships",
-         "Bowl Week 1", "Bowl Week 2", "Bowl Week 3", "Bowl Week 4"]
+         "Bowl Week 1", "Bowl Week 2", "Bowl Week 3", "Bowl Week 4", "Position Changes"]
 
 # Initialize data store for persistence
 store = YAML::Store.new("week_data.yml")
@@ -29,11 +29,17 @@ def calculate_advance_time(start_time, duration_in_hours)
   advance_time
 end
 
+# URL for the national championship trophy image
+trophy_image_url = 'https://th.bing.com/th/id/OIP.nAcdTDznBgncq5df6MocPwAAAA?rs=1&pid=ImgDetMain'
+# URL for the embed image
+embed_image_url = 'https://www.operationsports.com/wp-content/uploads/2024/02/IMG_4609.jpeg'
+
 # Command to advance the week
 bot.command :advance_week do |event, duration_in_hours = '48'|
-  # Ensure only admins can use this command
-  unless event.user.permission?(:administrator)
-    event.respond "You do not have permission to use this command."
+  # Ensure the message is posted in the "week-advances" channel
+  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
+  unless week_advances_channel
+    event.respond "The 'week-advances' channel was not found."
     next
   end
 
@@ -57,27 +63,100 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   # Get the next week name for the next advance
   next_week_name = weeks[current_week_index]
 
-  # Create the embed message
+  # Create the embed message with football emojis, footer, and image
   embed = Discordrb::Webhooks::Embed.new(
     title: "#{next_week_name} has started!",
-    description: "The deadline to complete your recruiting and games is #{advance_time_str}.",
-    color: 0x00FF00 # Green color
+    description: "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈",
+    color: 0x00FF00, # Green color
+    image: Discordrb::Webhooks::EmbedImage.new(url: embed_image_url)
+  )
+  embed.footer = Discordrb::Webhooks::EmbedFooter.new(
+    text: "2024 Florida Gators | 2025 Florida Gators | 2027 Arizona State Sun Devils",
+    icon_url: trophy_image_url
   )
 
-  # Send the embed message to the channel
-  event.channel.send_embed('', embed)
+  # Send the embed message to the "week-advances" channel and tag @everyone
+  week_advances_channel.send_message("@everyone")
+  week_advances_channel.send_embed('', embed)
+end
+
+# Command to set the current week manually
+bot.command :set_week do |event, week|
+  # Ensure the message is posted in the "week-advances" channel
+  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
+  unless week_advances_channel
+    event.respond "The 'week-advances' channel was not found."
+    next
+  end
+
+  # Check if the input is a number
+  if week =~ /^\d+$/
+    week_number = week.to_i
+    if week_number < 1 || week_number > weeks.length
+      event.respond "Invalid week number. Please provide a number between 1 and #{weeks.length}."
+      next
+    end
+    current_week_index = week_number - 1
+  else
+    # Check if the input is a valid week name
+    week_index = weeks.index { |w| w.casecmp(week).zero? }
+    if week_index.nil?
+      event.respond "Invalid week name. Please provide a valid week name or number."
+      next
+    end
+    current_week_index = week_index
+  end
+
+  # Store the new week index persistently
+  store.transaction do
+    store[:current_week_index] = current_week_index
+  end
+
+  # Get the current week name
+  current_week_name = weeks[current_week_index]
+
+  # Create the embed message with football emojis, footer, and image
+  embed = Discordrb::Webhooks::Embed.new(
+    title: "Week has been set!",
+    description: "🏈 The current week is now #{current_week_name}. 🏈",
+    color: 0xFF4500, # Orange color
+    image: Discordrb::Webhooks::EmbedImage.new(url: embed_image_url)
+  )
+  embed.footer = Discordrb::Webhooks::EmbedFooter.new(
+    text: "2024 Florida Gators | 2025 Florida Gators | 2027 Arizona State Sun Devils",
+    icon_url: trophy_image_url
+  )
+
+  # Send the embed message to the "week-advances" channel and tag @everyone
+  week_advances_channel.send_message("@everyone")
+  week_advances_channel.send_embed('', embed)
 end
 
 # Command to show the current week and deadline
 bot.command :current_week do |event|
   current_week_name = weeks[current_week_index]
   current_deadline = store.transaction { store[:current_deadline] }
+
+  # Create the embed message with football emojis, footer, and image
   embed = Discordrb::Webhooks::Embed.new(
     title: "Current Week: #{current_week_name}",
-    description: "The deadline to complete your recruiting and games is #{current_deadline}.",
-    color: 0x0000FF # Blue color
+    description: "🏈 The deadline to complete your recruiting and games is #{current_deadline}. 🏈",
+    color: 0x0000FF, # Blue color
+    image: Discordrb::Webhooks::EmbedImage.new(url: embed_image_url)
   )
-  event.channel.send_embed('', embed)
+  embed.footer = Discordrb::Webhooks::EmbedFooter.new(
+    text: "2024 Florida Gators | 2025 Florida Gators | 2027 Arizona State Sun Devils",
+    icon_url: trophy_image_url
+  )
+
+  # Send the embed message to the "week-advances" channel and tag @everyone
+  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
+  unless week_advances_channel
+    event.respond "The 'week-advances' channel was not found."
+    next
+  end
+  week_advances_channel.send_message("@everyone")
+  week_advances_channel.send_embed('', embed)
 end
 
 bot.run
