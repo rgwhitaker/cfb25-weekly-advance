@@ -11,9 +11,10 @@ weeks = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "
 # Initialize data store for persistence
 store = YAML::Store.new("week_data.yml")
 
-# Load current week index from the store, or initialize to 0
+# Load current week index and message ID from the store, or initialize to 0 and nil
 current_week_index = store.transaction { store[:current_week_index] } || 0
 current_deadline = store.transaction { store[:current_deadline] }
+week_message_id = store.transaction { store[:week_message_id] }
 
 # Hardcoded bot token
 bot_token = 'MTM0MDczNTEyNjA4NjM1NzAzMw.GZjn0S.BZVonQancbWFhnGQ1a2zbVBTkSZiw7dq4HLDNo'
@@ -51,11 +52,30 @@ def create_embed(title, description, color, image_url, footer_text, footer_icon_
   embed
 end
 
+# Helper function to get or create the week message
+def get_or_create_week_message(event)
+  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
+  return nil unless week_advances_channel
+
+  store.transaction do
+    week_message_id = store[:week_message_id]
+    if week_message_id
+      message = week_advances_channel.load_message(week_message_id) rescue nil
+      return message if message
+    end
+
+    # Create a new message if no valid message is found
+    new_message = week_advances_channel.send_message("Week advances information will be updated here.")
+    store[:week_message_id] = new_message.id
+    new_message
+  end
+end
+
 # Command to advance the week
 bot.command :advance_week do |event, duration_in_hours = '48'|
-  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
-  unless week_advances_channel
-    event.respond "The 'week-advances' channel was not found."
+  message = get_or_create_week_message(event)
+  unless message
+    event.respond "The 'week-advances' channel was not found or unable to create message."
     next
   end
 
@@ -76,10 +96,9 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
                        footer_text, trophy_image_url)
 
   begin
-    week_advances_channel.send_message("@everyone")
-    week_advances_channel.send_embed('', embed)
+    message.edit(embed: embed)
   rescue Discordrb::Errors::NoPermission
-    event.respond "I don't have permission to send messages to the 'week-advances' channel. Please check my permissions."
+    event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
   end
 end
 
