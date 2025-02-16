@@ -3,6 +3,11 @@ require 'active_support/time'
 require_relative 'config'
 require_relative 'helpers'
 
+def format_deadline(deadline_str)
+  deadline = Time.parse(deadline_str).in_time_zone('Eastern Time (US & Canada)')
+  deadline.strftime('%A, %B %d, %Y at %I:%M %p %Z')
+end
+
 def register_commands(bot)
   # Command to advance the week
   bot.command :advance_week do |event, duration_in_hours = '48'|
@@ -16,7 +21,7 @@ def register_commands(bot)
     current_week_name = WEEKS[current_week_index]
     current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
     advance_time = calculate_advance_time(current_time, duration_in_hours)
-    advance_time_str = advance_time.strftime('%A, %I:%M %p %Z')
+    advance_time_str = advance_time.strftime('%A, %B %d, %Y at %I:%M %p %Z')
     current_week_index = (current_week_index + 1) % WEEKS.length
 
     STORE.transaction do
@@ -69,15 +74,16 @@ def register_commands(bot)
 
     current_week_name = WEEKS[current_week_index]
     current_deadline = STORE.transaction { STORE[:current_deadline] }
+    formatted_deadline = format_deadline(current_deadline)
     new_title = "Week has been set!"
-    new_description = "🏈 The current week is now #{current_week_name}. 🏈 Deadline: #{current_deadline}."
+    new_description = "🏈 The current week is now #{current_week_name}. 🏈 Deadline: #{formatted_deadline}."
 
     begin
       original_embed = message.embeds.first
       embed = create_embed(new_title, new_description, original_embed.color, EMBED_IMAGE_URL,
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
-      event.respond "Current week set to #{current_week_name} with deadline #{current_deadline}."
+      event.respond "Current week set to #{current_week_name} with deadline #{formatted_deadline}."
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
@@ -109,14 +115,16 @@ def register_commands(bot)
 
     current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
     current_week_name = WEEKS[current_week_index]
-    new_description = "🏈 The deadline to complete your recruiting and games is #{new_deadline}. 🏈"
+    formatted_deadline = format_deadline(new_deadline)
+    original_embed = message.embeds.first
+    new_title = original_embed.title
+    new_description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈 Current week: #{current_week_name}."
 
     begin
-      original_embed = message.embeds.first
-      embed = create_embed(original_embed.title, new_description, original_embed.color, EMBED_IMAGE_URL,
+      embed = create_embed(new_title, new_description, original_embed.color, EMBED_IMAGE_URL,
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
-      event.respond "Deadline set to #{new_deadline}."
+      event.respond "Deadline set to #{formatted_deadline}."
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
