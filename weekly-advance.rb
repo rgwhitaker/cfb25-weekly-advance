@@ -9,7 +9,7 @@ weeks = ["Week 1", "Week 2", "Week 3", "Week 4", "Week 5", "Week 6", "Week 7", "
 # Initialize the current week index
 current_week_index = 0
 
-bot = Discordrb::Commands::CommandBot.new token: 'BOT_TOKEN', prefix: '!'
+bot = Discordrb::Commands::CommandBot.new token: 'MTM0MDczNTEyNjA4NjM1NzAzMw.GZjn0S.BZVonQancbWFhnGQ1a2zbVBTkSZiw7dq4HLDNo', prefix: '!'
 
 bot.command :advance_week do |event|
   # Get the current week name
