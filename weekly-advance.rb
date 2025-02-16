@@ -35,23 +35,23 @@ bot.command :advance_week do |event, duration_in_hours = '48'|
   advance_time = current_time + (duration_in_hours.to_i * 60 * 60)  # Duration in seconds
   advance_time_str = advance_time.strftime('%A, %I:%M %p')  # Format as Day, time in AM/PM
 
-  # Create the notification message
-  message = "The week \"#{current_week_name}\" has been advanced! The deadline to complete your games is #{advance_time_str}."
-
-  # Send the notification message to the channel
-  event.respond message
-
-  # Store the new week index and deadline persistently
-  store.transaction do
-    store[:current_week_index] = (current_week_index + 1) % weeks.length  # Wrap around to the first week if we reach the end
-    store[:current_deadline] = advance_time_str
-  end
-
   # Increment the week index
   current_week_index = (current_week_index + 1) % weeks.length
 
-  # Confirm the action
-  event.respond "The week has been successfully advanced to \"#{weeks[current_week_index]}\" with a deadline of #{advance_time_str}."
+  # Get the next week name for confirmation
+  next_week_name = weeks[current_week_index]
+
+  # Store the new week index and deadline persistently
+  store.transaction do
+    store[:current_week_index] = current_week_index
+    store[:current_deadline] = advance_time_str
+  end
+
+  # Create the notification message
+  message = "The week \"#{current_week_name}\" has been advanced! The deadline to complete your games is #{advance_time_str}.\nThe week has been successfully advanced to \"#{next_week_name}\" with a deadline of #{advance_time_str}."
+
+  # Send the notification message to the channel
+  event.respond message
 end
 
 # Command to show the current week and deadline
