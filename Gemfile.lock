@@ -32,6 +32,7 @@ GEM
     drb (2.2.1)
     event_emitter (0.2.6)
     ffi (1.17.1-x64-mingw-ucrt)
+    ffi (1.17.1-x86_64-linux-gnu)
     http-accept (1.7.0)
     http-cookie (1.0.8)
       domain_name (~> 0.5)
@@ -68,6 +69,7 @@ GEM
 
 PLATFORMS
   x64-mingw-ucrt
+  x86_64-linux
 
 DEPENDENCIES
   activesupport
