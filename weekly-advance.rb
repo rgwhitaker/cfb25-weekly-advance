@@ -27,6 +27,7 @@ bot.ready do
   end
 end
 
-register_commands(bot)
+register_commands(bot, STORE)
+
 
 bot.run
