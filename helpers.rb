@@ -34,21 +34,21 @@ def get_or_create_week_message(event, store)
   channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
   return nil unless channel
 
-  # Retrieve the saved message ID from the store
-  saved_message_id = store.transaction { store[:message_id] }
+  # Retrieve the saved message ID from the YAML-backed store
+  saved_message_id = store.transaction { |data| data[:message_id] }
 
   if saved_message_id
     begin
       # Attempt to fetch the existing message
       message = channel.message(saved_message_id)
 
-      # Confirm the existing message was found and return it
+      # Log success and return the existing message
       puts "[DEBUG] Successfully retrieved message with ID: #{saved_message_id}."
       return message
     rescue Discordrb::Errors::NoPermission
       puts "[ERROR] Bot does not have permission to access the saved message in the channel."
     rescue Discordrb::Errors::UnknownMessage
-      puts "[DEBUG] Saved message ID #{saved_message_id} does not exist, will create a new one."
+      puts "[DEBUG] Saved message ID #{saved_message_id} does not exist, creating a new one."
     end
   else
     puts "[DEBUG] No saved message ID found in storage, creating a new message."
@@ -60,9 +60,9 @@ def get_or_create_week_message(event, store)
   begin
     message = safe_send_message(channel, '', embed)
 
-    # Save the new message ID to the store for future retrieval
-    store.transaction do
-      store[:message_id] = message.id
+    # Save the new message ID in the YAML store
+    store.transaction do |data|
+      data[:message_id] = message.id
       puts "[DEBUG] New message created and saved with ID: #{message.id}."
     end
 
@@ -72,6 +72,7 @@ def get_or_create_week_message(event, store)
     puts "[ERROR] Failed to send new message: #{e.message}"
   end
 end
+
 
 
 def send_lobby_notification(server, content)
