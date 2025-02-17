@@ -39,8 +39,11 @@ def register_commands(bot)
       message.edit('', embed)
       event.respond "Week advanced to #{next_week_name}, and the deadline is set to #{advance_time_str}."
 
+      # Construct the message link
+      link = message_link(event.server.id, message.channel.id, message.id)
+
       # Send a ping to the lobby channel
-      ping_message = "📢 @everyone, the **week has advanced** to **#{next_week_name}**! 🏈\nDeadline: **#{advance_time_str}**."
+      ping_message = "📢 @everyone, the **week has advanced** to **#{next_week_name}**! 🏈\nDeadline: **#{advance_time_str}**.\nView the full announcement here: [Click to view](#{link})"
       send_lobby_notification(event.server, ping_message)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
@@ -93,8 +96,11 @@ def register_commands(bot)
 
       event.respond "Current week set to #{current_week_name} (#{formatted_deadline})."
 
+      # Construct the message link
+      link = message_link(event.server.id, message.channel.id, message.id)
+
       # Send a ping to the lobby channel
-      ping_message = "📢 @everyone, the **current week** has been manually set to **#{current_week_name}**! 🏈\nDeadline: **#{formatted_deadline}**."
+      ping_message = "📢 @everyone, the **current week** has been manually set to **#{current_week_name}**! 🏈\nDeadline: **#{formatted_deadline}**.\nView the full announcement here: [Click to view](#{link})"
       send_lobby_notification(event.server, ping_message)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
@@ -129,12 +135,14 @@ def register_commands(bot)
 
       event.respond "Deadline updated to #{formatted_deadline}."
 
+      # Construct the message link
+      link = message_link(event.server.id, message.channel.id, message.id)
+
       # Send a ping to the lobby channel
-      ping_message = "📢 @everyone, the **deadline** has been updated! 🏈\nNew Deadline: **#{formatted_deadline}**."
+      ping_message = "📢 @everyone, the **deadline** has been updated! 🏈\nNew Deadline: **#{formatted_deadline}**.\nView the full announcement here: [Click to view](#{link})"
       send_lobby_notification(event.server, ping_message)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
   end
-
 end

@@ -52,3 +52,7 @@ def send_lobby_notification(server, content)
   # Send the ping message to the lobby channel
   lobby_channel.send_message(content)
 end
+
+def message_link(guild_id, channel_id, message_id)
+  "https://discord.com/channels/#{guild_id}/#{channel_id}/#{message_id}"
+end
