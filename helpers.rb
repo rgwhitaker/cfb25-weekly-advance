@@ -41,16 +41,15 @@ def get_or_create_week_message(event, store)
   # Retrieve the saved message ID from the YAML-backed store
   saved_message_id = store.transaction do |data|
     puts "[DEBUG] Current store contents inside transaction: #{data.inspect}" # Log before retrieving
-    data[:message_id]
+
+    # Safely retrieve message_id from both symbol and string keys
+    data[:message_id] || data['message_id']
   end
-  puts "[DEBUG] Retrieved saved message ID: #{saved_message_id.inspect}" # Confirm retrieval
 
   if saved_message_id
     begin
       # Attempt to fetch the existing message
       message = channel.message(saved_message_id)
-
-      # Log success and return the existing message
       puts "[DEBUG] Successfully retrieved message with ID: #{saved_message_id}."
       return message
     rescue Discordrb::Errors::NoPermission
