@@ -36,11 +36,10 @@ def get_or_create_week_message(event, store)
 
   # Retrieve the saved message ID from the YAML-backed store
   saved_message_id = store.transaction do |data|
-    puts "[DEBUG] Current store data: #{data.inspect}" # Log all stored data
+    puts "[DEBUG] Current store contents inside transaction: #{data.inspect}" # Log before retrieving
     data[:message_id]
   end
-
-  puts "[DEBUG] Retrieved saved message ID: #{saved_message_id.inspect}" # Log the specific message ID
+  puts "[DEBUG] Retrieved saved message ID: #{saved_message_id.inspect}" # Confirm retrieval
 
   if saved_message_id
     begin
@@ -68,7 +67,7 @@ def get_or_create_week_message(event, store)
     # Save the new message ID in the YAML store
     store.transaction do |data|
       data[:message_id] = message.id
-      puts "[DEBUG] New message created and saved with ID: #{message.id}."
+      puts "[DEBUG] Saved message ID to store: #{data[:message_id]}"
     end
 
     return message
