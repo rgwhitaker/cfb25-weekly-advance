@@ -45,25 +45,30 @@ def get_or_create_week_message(event, store)
   end
 
   if saved_message_id
+    puts "[DEBUG] Saved message ID found in store: #{saved_message_id}"
     begin
-      # Attempt to fetch the existing message
+      # Try to retrieve the message with the stored message ID
       message = channel.message(saved_message_id)
-      puts "[DEBUG] Successfully retrieved message with ID: #{saved_message_id}."
-      return message
+      if message
+        puts "[DEBUG] Successfully retrieved message with ID: #{saved_message_id}"
+        return message
+      else
+        puts "[DEBUG] Stored message ID #{saved_message_id} is invalid or could not be fetched."
+      end
     rescue Discordrb::Errors::NoPermission
-      puts "[ERROR] Bot does not have permission to access the saved message in the channel."
+      puts "[ERROR] Bot lacks permission to access the message: #{saved_message_id}."
     rescue Discordrb::Errors::UnknownMessage
-      puts "[DEBUG] Saved message ID #{saved_message_id} does not exist. Creating a new one."
+      puts "[WARN] Stored message ID #{saved_message_id} does not correspond to any message (it may have been deleted)."
     rescue => e
-      puts "[ERROR] Unexpected error while fetching message: #{e.message}"
+      puts "[ERROR] Unexpected error occurred while retrieving the message: #{e.class} - #{e.message}"
     end
   else
-    puts "[DEBUG] No saved message ID found in storage. Creating a new one."
+    puts "[DEBUG] No saved message ID found in storage."
   end
 
-  # Create a new message if one does not exist
+  # Create a new message if no valid existing message is found
   embed = create_default_week_embed
-  puts "[DEBUG] Creating new week message with embed: #{embed.inspect}"
+  puts "[DEBUG] Creating a new week message with embed: #{embed.inspect}"
 
   begin
     message = safe_send_message(channel, '', embed)
@@ -76,7 +81,6 @@ def get_or_create_week_message(event, store)
 
     return message
   rescue => e
-    # Log any unexpected errors during message creation
     puts "[ERROR] Failed to create a new message: #{e.message}"
     return nil
   end
