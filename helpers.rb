@@ -38,23 +38,20 @@ def get_or_create_week_message(event, store)
   # Debug: Validate saved message ID
   puts "[DEBUG] Retrieved saved_message_id: #{saved_message_id.inspect}"
 
-  begin
-    saved_message_id = STORE.transaction { STORE[:message_id] }
+  if saved_message_id
+    begin
+      # Attempt to fetch the existing message
+      message = channel.message(saved_message_id)
 
-    # Additional safeguard against nil or invalid IDs
-    if saved_message_id.nil? || saved_message_id.to_s.empty?
-      puts "[DEBUG] No valid saved message ID found. Creating a new message."
-      raise Discordrb::Errors::UnknownMessage
+      # Debug: Validate the fetched message
+      puts "[DEBUG] Successfully found message with ID: #{saved_message_id}"
+
+      return message
+    rescue Discordrb::Errors::NoPermission, Discordrb::Errors::UnknownMessage
+      # If permission was denied or the message was deleted, log it
+      puts "[DEBUG] Couldn't fetch message with ID: #{saved_message_id} - Creating a new message."
     end
-
-    message = channel.message(saved_message_id)
-    puts "[DEBUG] Successfully retrieved message: #{message.id}"
-    return message
-  rescue StandardError => e
-    puts "[DEBUG] Exception while retrieving or sending message: #{e.message}"
-    # Fall back to creating a new message
   end
-
 
   # Create a new message if no valid saved message exists
   embed = create_default_week_embed
@@ -62,17 +59,17 @@ def get_or_create_week_message(event, store)
   # Debug: Validate embed before sending
   puts "[DEBUG] Sending new embed message: #{embed.inspect}"
 
-  message = channel.send_message('', embed: embed, tts: false)
+  # Correct positional arguments for `send_message`
+  message = channel.send_message('', false, embed)
 
   STORE.transaction do
-    STORE[:message_id] = message.id
-    # Debug: Confirm stored ID
-    puts "[DEBUG] Message ID stored in STORE: #{STORE[:message_id].inspect}"
+    STORE[:message_id] = message.id # Save the new message ID
+    # Debug: Confirm message ID is saved
+    puts "[DEBUG] New message ID saved: #{message.id}"
   end
 
   message
 end
-
 
 def send_lobby_notification(server, content)
   # Replace 'lobby' with the actual lobby channel name
