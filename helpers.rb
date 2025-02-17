@@ -30,28 +30,59 @@ end
 
 # Helper function to get or reuse the week message
 def get_or_create_week_message(event, store)
+  # Log method entry
+  puts "[DEBUG] Entering get_or_create_week_message"
+
   channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
-  return nil unless channel
+  if channel.nil?
+    puts "[DEBUG] Could not find the 'week-advances' channel"
+    return nil
+  end
 
-  saved_message_id = STORE.transaction { STORE[:message_id] }
+  # Log the channel
+  puts "[DEBUG] Identified channel: #{channel.name}"
 
-  # Debug: Validate saved message ID
+  # Attempt to retrieve the stored message ID
+  saved_message_id = STORE.transaction do
+    puts "[DEBUG] Attempting to fetch stored message_id"
+    STORE[:message_id]
+  end
+
+  # Log the retrieved message ID (or lack of it)
   puts "[DEBUG] Retrieved saved_message_id: #{saved_message_id.inspect}"
 
+  # Check if a valid saved_message_id exists
   if saved_message_id
     begin
-      # Attempt to fetch the existing message
+      # Attempt to fetch the message from Discord
       message = channel.message(saved_message_id)
-
-      # Debug: Validate the fetched message
-      puts "[DEBUG] Successfully found message with ID: #{saved_message_id}"
-
+      puts "[DEBUG] Successfully fetched message with ID: #{saved_message_id}"
       return message
-    rescue Discordrb::Errors::NoPermission, Discordrb::Errors::UnknownMessage
-      # If permission was denied or the message was deleted, log it
-      puts "[DEBUG] Couldn't fetch message with ID: #{saved_message_id} - Creating a new message."
+    rescue Discordrb::Errors::NoPermission
+      puts "[DEBUG] Unable to fetch message with ID #{saved_message_id} due to missing permissions."
+    rescue Discordrb::Errors::UnknownMessage
+      puts "[DEBUG] Unable to fetch message with ID #{saved_message_id}, it might have been deleted."
     end
+  else
+    puts "[DEBUG] No saved message ID found (it is nil)"
   end
+
+  # If we reach here, we need to create a new message
+  embed = create_default_week_embed
+  puts "[DEBUG] Sending a new embed message: #{embed.inspect}"
+
+  # Send the new embed message
+  message = channel.send_message('', false, embed)
+  puts "[DEBUG] New embed message created with ID: #{message.id}"
+
+  # Save the message ID to the persistent store
+  STORE.transaction do
+    puts "[DEBUG] Saving new message ID: #{message.id}"
+    STORE[:message_id] = message.id
+  end
+
+  return message
+end
 
   # Create a new message if no valid saved message exists
   embed = create_default_week_embed
