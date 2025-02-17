@@ -157,4 +157,123 @@ def register_commands(bot)
       event.respond "Invalid input for deadline. Please provide a valid date like `2023-11-28 00:00` or `Tuesday at 12:00AM`."
     end
   end
+
+  def initialize_week_advances(bot, store)
+    bot.command(:initialize) do |event|
+      # Ensure the user has permissions
+      unless event.user.has_permission?(:administrator) || event.user.id == event.server.owner.id
+        event.respond("❌ You don't have permissions to initialize the bot.")
+        next
+      end
+
+      # Step 1: Verify or create the 'week-advances' channel
+      channel_name = 'week-advances'
+      channel = event.server.channels.find { |ch| ch.name == channel_name }
+
+      if channel.nil?
+        begin
+          channel = event.server.create_channel(channel_name, 'text') # Create the text channel
+          event.respond("✅ Created new channel: `#{channel_name}`.")
+        rescue StandardError => e
+          event.respond("❌ Failed to create `#{channel_name}` channel: #{e.message}")
+          next
+        end
+      else
+        event.respond("✅ Found existing channel: `#{channel_name}`.")
+      end
+
+      # Step 2: Create or verify the week message
+      saved_message_id = store.transaction { |data| data[:message_id] }
+
+      if saved_message_id
+        begin
+          # Attempt to load the existing message
+          existing_message = channel.load_message(saved_message_id.to_s)
+          if existing_message
+            event.respond("✅ Found existing week message with ID #{saved_message_id}.")
+            next
+          end
+        rescue Discordrb::Errors::UnknownMessage
+          event.respond("⚠️ Message ID #{saved_message_id} not found in `#{channel_name}`.")
+        rescue StandardError => e
+          event.respond("❌ Error loading message ID #{saved_message_id}: #{e.message}")
+        end
+      end
+
+      # Step 3: If no valid message exists, create a new one
+      begin
+        embed = create_default_week_embed
+        new_message = channel.send_message('', false, embed)
+
+        # Save the message ID
+        store.transaction do |data|
+          data[:message_id] = new_message.id
+          data[:current_week_index] = 0 # Bonus: Optionally initialize other state here
+        end
+
+        event.respond("✅ Created new week message and saved it with ID #{new_message.id}.")
+      rescue StandardError => e
+        event.respond("❌ Failed to create a new message in `#{channel_name}`: #{e.message}")
+      end
+    end
+
+    def status_week_advances(bot, store)
+      bot.command(:status) do |event|
+        # Ensure the user has permissions
+        unless event.user.has_permission?(:administrator) || event.user.id == event.server.owner.id
+          event.respond("❌ You don't have permissions to view the bot's status.")
+          next
+        end
+
+        # Retrieve the current state
+        saved_message_id = store.transaction { |data| data[:message_id] }
+        channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+
+        status = "📊 **Bot Status**:\n"
+        status += "- Channel: `#{channel.nil? ? 'Not Found' : channel.name}`\n"
+        status += "- Stored Message ID: `#{saved_message_id || 'None'}`\n"
+
+        # Check if the message still exists
+        if saved_message_id && channel
+          begin
+            message = channel.load_message(saved_message_id.to_s)
+            status += "- Message Status: ✅ Found\n"
+          rescue Discordrb::Errors::UnknownMessage
+            status += "- Message Status: ❌ Not Found (deleted?)\n"
+          rescue StandardError => e
+            status += "- Message Status: ❌ Error: #{e.message}\n"
+          end
+        else
+          status += "- Message Status: ⚠️ Unknown (no message ID or channel mismatch)\n"
+        end
+
+        # Respond with the bot's current status
+        event.respond(status)
+      end
+    end
+
+    def reset_week_advances(bot, store)
+      bot.command(:reset) do |event|
+        # Ensure the user has administrator permissions
+        unless event.user.has_permission?(:administrator) || event.user.id == event.server.owner.id
+          event.respond("❌ You don't have permissions to reset the bot.")
+          next
+        end
+
+        # Optionally confirm reset from the user
+        event.respond("⚠️ Are you sure you want to reset the bot? Type `!confirm_reset` to proceed.")
+
+        # You could implement confirmation logic or store a temp state here if desired
+        bot.command(:confirm_reset) do |confirm_event|
+          next unless event.user == confirm_event.user # Ensure it's the same user
+
+          store.transaction do |data|
+            data.clear # Clear all stored data
+          end
+
+          event.respond("✅ Bot state has been reset. Please run `!initialize` to set it up again.")
+        end
+      end
+    end
+  end
 end
