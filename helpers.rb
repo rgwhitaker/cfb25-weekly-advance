@@ -77,7 +77,7 @@ def send_lobby_notification(server, content)
   return unless lobby_channel
 
   # Send the ping message to the lobby channel
-  lobby_channel.send_message(content, tts: false) # Set tts explicitly to false
+  lobby_channel.send_message(content, false) # Set tts explicitly to false
 end
 
 def message_link(guild_id, channel_id, message_id)
