@@ -13,7 +13,7 @@ def register_commands(bot)
   bot.command :advance_week do |event, duration_in_hours = '48'|
     message = get_or_create_week_message(event, STORE)
     unless message
-      event.respond "The 'week-advances' channel was not found or unable to create message."
+      event.respond "The 'week-advances' channel was not found or unable to create the message."
       next
     end
 
@@ -35,8 +35,13 @@ def register_commands(bot)
                          FOOTER_TEXT, TROPHY_IMAGE_URL)
 
     begin
+      # Update the persistent embed in the week-advances channel
       message.edit('', embed)
       event.respond "Week advanced to #{next_week_name}, and the deadline is set to #{advance_time_str}."
+
+      # Send a ping to the lobby channel
+      ping_message = "📢 @everyone, the **week has advanced** to **#{next_week_name}**! 🏈\nDeadline: **#{advance_time_str}**."
+      send_lobby_notification(event.server, ping_message)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
@@ -46,7 +51,7 @@ def register_commands(bot)
   bot.command :set_week do |event, week|
     message = get_or_create_week_message(event, STORE)
     unless message
-      event.respond "The 'week-advances' channel was not found or unable to create message."
+      event.respond "The 'week-advances' channel was not found or unable to create the message."
       next
     end
 
@@ -77,16 +82,20 @@ def register_commands(bot)
     formatted_deadline = format_deadline(current_deadline)
 
     begin
-      # Preserve embed structure and update only the title and current week
+      # Update the persistent embed
       original_embed = message.embeds.first
-      new_title = "#{current_week_name} has started!" # Update the week name in the title
-      new_description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈" # Keep the description format
+      new_title = "#{current_week_name} has started!"
+      new_description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈"
 
       embed = create_embed(new_title, new_description, original_embed.color || 0x00FF00, EMBED_IMAGE_URL,
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
 
       event.respond "Current week set to #{current_week_name} (#{formatted_deadline})."
+
+      # Send a ping to the lobby channel
+      ping_message = "📢 @everyone, the **current week** has been manually set to **#{current_week_name}**! 🏈\nDeadline: **#{formatted_deadline}**."
+      send_lobby_notification(event.server, ping_message)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
@@ -96,7 +105,7 @@ def register_commands(bot)
   bot.command :set_deadline do |event, new_deadline|
     message = get_or_create_week_message(event, STORE)
     unless message
-      event.respond "The 'week-advances' channel was not found or unable to create message."
+      event.respond "The 'week-advances' channel was not found or unable to create the message."
       next
     end
 
@@ -109,18 +118,23 @@ def register_commands(bot)
     formatted_deadline = format_deadline(new_deadline)
 
     begin
-      # Preserve embed structure and update only the deadline
+      # Update the persistent embed
       original_embed = message.embeds.first
-      new_title = original_embed.title || "#{current_week_name} has started!" # Retain or fallback to the original title
-      new_description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈" # Update only the deadline
+      new_title = original_embed.title || "#{current_week_name} has started!"
+      new_description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈"
 
       embed = create_embed(new_title, new_description, original_embed.color || 0x00FF00, EMBED_IMAGE_URL,
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
 
       event.respond "Deadline updated to #{formatted_deadline}."
+
+      # Send a ping to the lobby channel
+      ping_message = "📢 @everyone, the **deadline** has been updated! 🏈\nNew Deadline: **#{formatted_deadline}**."
+      send_lobby_notification(event.server, ping_message)
     rescue Discordrb::Errors::NoPermission
       event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
     end
   end
+
 end

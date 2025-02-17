@@ -43,3 +43,12 @@ def get_or_create_week_message(event, store)
     new_message
   end
 end
+
+def send_lobby_notification(server, content)
+  # Replace 'lobby' with the actual lobby channel name
+  lobby_channel = server.channels.find { |channel| channel.name == 'lobby' }
+  return unless lobby_channel
+
+  # Send the ping message to the lobby channel
+  lobby_channel.send_message(content)
+end
