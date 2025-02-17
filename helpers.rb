@@ -35,7 +35,12 @@ def get_or_create_week_message(event, store)
   return nil unless channel
 
   # Retrieve the saved message ID from the YAML-backed store
-  saved_message_id = store.transaction { |data| data[:message_id] }
+  saved_message_id = store.transaction do |data|
+    puts "[DEBUG] Current store data: #{data.inspect}" # Log all stored data
+    data[:message_id]
+  end
+
+  puts "[DEBUG] Retrieved saved message ID: #{saved_message_id.inspect}" # Log the specific message ID
 
   if saved_message_id
     begin
