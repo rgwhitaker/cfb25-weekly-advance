@@ -47,7 +47,7 @@ def get_or_create_week_message(event, store)
   if saved_message_id
     begin
       # Try to fetch the existing message from the channel
-      message = channel.message(saved_message_id)
+      message = channel.load_message(saved_message_id.to_s)
       if message
         puts "[INFO] Successfully retrieved message with ID #{saved_message_id}"
         return message
