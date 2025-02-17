@@ -30,7 +30,7 @@ end
 
 # Helper function to get or reuse the week message
 def get_or_create_week_message(event, store)
-  # Find the week-advances channel
+  # Step 1: Find the 'week-advances' channel
   channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
   unless channel
     puts "[WARN] Could not find the 'week-advances' channel in the server."
@@ -38,7 +38,7 @@ def get_or_create_week_message(event, store)
   end
   puts "[DEBUG] Located 'week-advances' channel: #{channel.inspect}"
 
-  # Retrieve the saved message ID from storage
+  # Step 2: Retrieve the saved message ID from storage
   saved_message_id = store.transaction do |data|
     puts "[DEBUG] Current store contents inside transaction: #{data.inspect}"
     data[:message_id] || data['message_id']
@@ -47,33 +47,38 @@ def get_or_create_week_message(event, store)
   if saved_message_id
     puts "[DEBUG] Saved message ID found in store: #{saved_message_id}"
     begin
-      # Try to retrieve the message with the stored message ID
+      # Step 3: Attempt to retrieve the existing message
       message = channel.message(saved_message_id)
       if message
         puts "[DEBUG] Successfully retrieved message with ID: #{saved_message_id}"
+
+        # Step 4: Edit this existing message instead of creating a new one
+        embed = create_default_week_embed
+        puts "[DEBUG] Editing existing message with new embed: #{embed.inspect}"
+        message.edit('', embed) # Edit the message with the new content
         return message
       else
-        puts "[DEBUG] Stored message ID #{saved_message_id} is invalid or could not be fetched."
+        puts "[WARN] Message with ID #{saved_message_id} cannot be retrieved but no error was raised."
       end
-    rescue Discordrb::Errors::NoPermission
-      puts "[ERROR] Bot lacks permission to access the message: #{saved_message_id}."
     rescue Discordrb::Errors::UnknownMessage
-      puts "[WARN] Stored message ID #{saved_message_id} does not correspond to any message (it may have been deleted)."
+      puts "[WARN] Message with ID #{saved_message_id} was not found (possibly deleted)."
+    rescue Discordrb::Errors::NoPermission
+      puts "[ERROR] Bot lacks permissions to fetch or edit the message in the channel."
     rescue => e
-      puts "[ERROR] Unexpected error occurred while retrieving the message: #{e.class} - #{e.message}"
+      puts "[ERROR] Unexpected error while retrieving or editing the message: #{e.class} - #{e.message}"
     end
   else
-    puts "[DEBUG] No saved message ID found in storage."
+    puts "[DEBUG] No saved message ID found in storage. Going to create a new one."
   end
 
-  # Create a new message if no valid existing message is found
+  # Step 5: Create a new message if no valid one exists
   embed = create_default_week_embed
   puts "[DEBUG] Creating a new week message with embed: #{embed.inspect}"
 
   begin
     message = safe_send_message(channel, '', embed)
 
-    # Save the new message ID in the YAML store
+    # Step 6: Save the new message ID in the YAML store
     store.transaction do |data|
       data[:message_id] = message.id
       puts "[DEBUG] Saved newly created message ID to store: #{data[:message_id]}"
