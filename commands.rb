@@ -56,28 +56,18 @@ def register_commands(bot)
 
     week = week_parts.join(" ").strip
 
-    # Retrieve and re-parse the current deadline to ensure correct time zone handling
-    current_deadline_str = STORE.transaction { STORE[:current_deadline] } || "No deadline set"
-
-    # Re-parse the deadline if it's valid
-    current_deadline = begin
-                         Time.parse(current_deadline_str).in_time_zone('Eastern Time (US & Canada)')
-                       rescue ArgumentError
-                         nil
-                       end
-
     begin
       current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
 
-      # Handle numeric week (e.g., "5")
-      if week =~ /^\d+$/
+      # Determine the new week index
+      if week =~ /^\d+$/  # Check if the week is a number
         week_number = week.to_i
         if week_number < 1 || week_number > WEEKS.length
           event.respond "Invalid week number. Please provide a number between 1 and #{WEEKS.length}."
           next
         end
         current_week_index = week_number - 1
-      else
+      else  # Match week by name
         matching_week = WEEKS.find { |w| w.downcase.include?(week.downcase) }
         if matching_week.nil?
           event.respond "Invalid week name. Please provide a valid week name or number. Use partial names like 'Week 1' or 'Championship'."
@@ -86,29 +76,40 @@ def register_commands(bot)
         current_week_index = WEEKS.index(matching_week)
       end
 
-      # Update the current week in the database
+      # Update the current week index in the datastore
       STORE.transaction do
         STORE[:current_week_index] = current_week_index
       end
 
       current_week_name = WEEKS[current_week_index]
-      formatted_deadline = current_deadline ? format_deadline(current_deadline.to_s) : "No deadline set"
 
-      # Update the embed without altering the deadline
+      # Extract the current deadline text directly from the embed
+      current_embed = message.embeds.first
+      current_description = current_embed.description || ""
+      deadline_text_match = current_description.match(/The deadline to complete your recruiting and games is (.+?)\./)
+
+      # Preserve the existing deadline text if found
+      if deadline_text_match
+        existing_deadline_text = deadline_text_match[1]
+      else
+        existing_deadline_text = "No deadline set"
+      end
+
+      # Update the embed with the new week name but keep the deadline text unchanged
+      new_title = "#{current_week_name} has started!"
+      new_description = "🏈 The deadline to complete your recruiting and games is #{existing_deadline_text}. 🏈"
+
       begin
-        original_embed = message.embeds.first
-        new_title = "#{current_week_name} has started!"
-        new_description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈"
+        # Update the embed message with the new week but unchanged deadline
+        update_embed_message(message, new_title, new_description, current_embed)
 
-        update_embed_message(message, new_title, new_description, original_embed)
-
-        event.respond "Current week set to **#{current_week_name}**, and the deadline remains **#{formatted_deadline}**."
+        event.respond "Current week set to **#{current_week_name}**, and the deadline remains unchanged."
 
         # Construct the message link
         link = message_link(event.server.id, message.channel.id, message.id)
 
         # Send a ping to the lobby channel
-        notify_lobby(event.server, "current week has been manually set to **#{current_week_name}**", formatted_deadline, link)
+        notify_lobby(event.server, "current week has been manually set to **#{current_week_name}**", existing_deadline_text, link)
       rescue Discordrb::Errors::NoPermission
         event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
       end
