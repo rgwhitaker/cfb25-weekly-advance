@@ -83,6 +83,74 @@ def initialize_week_advances(bot, store)
   end
 end
 
+# Command: !advance_week
+def advance_week(bot, store)
+  bot.command :advance_week do |event, duration_in_hours = '48'|
+    message = get_or_create_week_message(event, store)
+    unless message
+      event.respond "The 'week-advances' channel was not found or unable to create the message."
+      next
+    end
+
+    current_week_index = store.transaction { store[:current_week_index] } || 0
+    current_week_name = WEEKS[current_week_index]
+    current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
+    advance_time = calculate_advance_time(current_time, duration_in_hours)
+    advance_time_str = format_deadline(advance_time.to_s)
+    current_week_index = (current_week_index + 1) % WEEKS.length
+
+    store.transaction do
+      store[:current_week_index] = current_week_index
+      store[:current_deadline] = advance_time_str
+    end
+
+    next_week_name = WEEKS[current_week_index]
+    description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
+
+    begin
+      update_embed_message(message, "#{next_week_name} has started!", description, message.embeds.first)
+      event.respond "Week advanced to #{next_week_name}, and the deadline is set to #{advance_time_str}."
+      link = message_link(event.server.id, message.channel.id, message.id)
+      notify_lobby(event.server, "week has advanced to **#{next_week_name}**", advance_time_str, link)
+    rescue Discordrb::Errors::NoPermission
+      event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+    end
+  end
+end
+
+# Command: !set_week
+def set_week(bot, store)
+  bot.command :set_week do |event, *week_parts|
+    message = get_or_create_week_message(event, store)
+    unless message
+      event.respond "The 'week-advances' channel was not found or unable to create the message."
+      next
+    end
+
+    week = week_parts.join(" ").strip
+
+    begin
+      current_week_index = find_week_index(week) # Helper method to find the week index
+      store.transaction do
+        store[:current_week_index] = current_week_index
+      end
+
+      # Update embed with unchanged deadline and new week
+      current_week_name = WEEKS[current_week_index]
+      existing_deadline = store.transaction { store[:current_deadline] || "No deadline set" }
+      new_title = "#{current_week_name} has started!"
+      new_description = "🏈 The deadline to complete your recruiting and games is #{existing_deadline}. 🏈"
+
+      update_embed_message(message, new_title, new_description, message.embeds.first)
+      event.respond "Current week set to **#{current_week_name}**, and the deadline remains unchanged."
+      link = message_link(event.server.id, message.channel.id, message.id)
+      notify_lobby(event.server, "current week has been manually set to **#{current_week_name}**", existing_deadline, link)
+    rescue => e
+      event.respond "An error occurred while setting the current week: #{e.message}"
+    end
+  end
+end
+
 # Command: !set_deadline
 def set_deadline(bot, store)
   bot.command :set_deadline do |event, *args|
