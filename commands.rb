@@ -21,14 +21,19 @@ end
 # Command: !initialize
 def initialize_week_advances(bot, store)
   bot.command(:initialize) do |event|
-    unless event.user.has_permission?(:administrator) || event.user.id == event.server.owner.id
+    # Get the member object of the user who triggered the command
+    member = event.server.member(event.user.id)
+
+    # Check if the member has administrator permissions
+    unless member.permission?(:administrator) || member.id == event.server.owner.id
       event.respond("❌ You don't have permissions to initialize the bot.")
       next
     end
 
-    # Create or find the 'week-advances' channel
+    # Step 1: Verify or create the 'week-advances' channel
     channel_name = 'week-advances'
     channel = event.server.channels.find { |ch| ch.name == channel_name }
+
     if channel.nil?
       begin
         channel = event.server.create_channel(channel_name, 0) # 0 = text channel
@@ -41,10 +46,12 @@ def initialize_week_advances(bot, store)
       event.respond("✅ Found existing channel: `#{channel_name}`.")
     end
 
-    # Create or retrieve stored message
-    saved_message_id = store.transaction { store[:message_id] }
+    # Step 2: Create or verify the week message
+    saved_message_id = store.transaction { |data| data[:message_id] }
+
     if saved_message_id
       begin
+        # Attempt to load the existing message
         existing_message = channel.load_message(saved_message_id.to_s)
         if existing_message
           event.respond("✅ Found existing week message with ID #{saved_message_id}.")
@@ -57,14 +64,17 @@ def initialize_week_advances(bot, store)
       end
     end
 
-    # Create a new message if no valid message exists
+    # Step 3: If no valid message exists, create a new one
     begin
       embed = create_default_week_embed
       new_message = channel.send_message('', false, embed)
+
+      # Save the message ID
       store.transaction do |data|
         data[:message_id] = new_message.id
-        data[:current_week_index] = 0
+        data[:current_week_index] = 0 # Initialize current state
       end
+
       event.respond("✅ Created new week message and saved it with ID #{new_message.id}.")
     rescue StandardError => e
       event.respond("❌ Failed to create a new message in `#{channel_name}`: #{e.message}")
