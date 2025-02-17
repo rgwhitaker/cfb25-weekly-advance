@@ -60,7 +60,7 @@ def get_or_create_week_message(event, store)
   puts "[DEBUG] Sending new embed message: #{embed.inspect}"
 
   # Correct positional arguments for `send_message`
-  message = channel.send_message('', false, embed)
+  message = channel.safe_send_message('', false, embed)
 
   STORE.transaction do
     STORE[:message_id] = message.id # Save the new message ID
@@ -77,7 +77,7 @@ def send_lobby_notification(server, content)
   return unless lobby_channel
 
   # Send the ping message to the lobby channel
-  lobby_channel.send_message(content, false) # Set tts explicitly to false
+  lobby_channel.safe_send_message(content, false) # Set tts explicitly to false
 end
 
 def message_link(guild_id, channel_id, message_id)
@@ -116,7 +116,7 @@ end
 def update_embed_message(message, title, description, original_embed)
   embed = create_embed(title, description, original_embed.color || 0x00FF00, EMBED_IMAGE_URL,
                        FOOTER_TEXT, TROPHY_IMAGE_URL)
-  message.edit('', embed)
+  message.safe_edit_message('', embed)
 end
 
 # Shared helper function to notify the lobby channel
@@ -125,3 +125,28 @@ def notify_lobby(server, title, deadline, link)
   send_lobby_notification(server, content)
 end
 
+def safe_send_message(channel, content, embed = nil)
+  begin
+    channel.send_message(content, false, embed)
+  rescue Discordrb::Errors::RateLimited => e
+    # Handle rate limits by sleeping for the specified amount of time
+    puts "[WARN] Rate-limited! Sleeping for #{e.retry_after} seconds..."
+    sleep(e.retry_after)
+    retry
+  rescue => e
+    # Log unexpected errors (e.g., network or API issues)
+    puts "[ERROR] Failed to send message: #{e.message}"
+  end
+end
+
+def safe_edit_message(message, content, embed)
+  begin
+    message.edit(content, embed)
+  rescue Discordrb::Errors::RateLimited => e
+    puts "[WARN] Rate-limited! Sleeping for #{e.retry_after} seconds..."
+    sleep(e.retry_after)
+    retry
+  rescue => e
+    puts "[ERROR] Failed to edit message: #{e.message}"
+  end
+end
