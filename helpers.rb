@@ -77,3 +77,15 @@ def next_weekday(day_name)
   days_ahead = 7 if days_ahead == 0 # If today is the target day, move it to the next week
   current_time + (days_ahead * 24 * 60 * 60) # Add days in seconds
 end
+
+# Helper function to create the default embed for the week message
+def create_default_week_embed
+  title = "Welcome to the New Week!"
+  description = "🏈 A new week has begun! Complete your recruiting and games before the deadline. 🏈"
+  color = 0x00FF00 # Green color
+  image_url = "https://example.com/placeholder-image.png" # Replace this with your embed image URL
+  footer_text = "League Updates"
+  footer_icon_url = "https://example.com/placeholder-footer-icon.png" # Replace with your footer icon URL
+
+  create_embed(title, description, color, image_url, footer_text, footer_icon_url)
+end
