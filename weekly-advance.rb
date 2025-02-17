@@ -2,9 +2,10 @@
 require 'discordrb'
 require_relative 'config'
 require_relative 'commands'
+require 'dotenv'
+Dotenv.load
 
-# Hardcoded bot token
-bot_token = 'MTM0MDczNTEyNjA4NjM1NzAzMw.GZjn0S.BZVonQancbWFhnGQ1a2zbVBTkSZiw7dq4HLDNo'
+bot_token = ENV['DISCORD_BOT_TOKEN']
 bot = Discordrb::Commands::CommandBot.new token: bot_token, prefix: '!'
 
 register_commands(bot)
