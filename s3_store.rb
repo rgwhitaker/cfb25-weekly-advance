@@ -12,11 +12,8 @@ class S3Store
 
   # Mimic transaction behavior for backward compatibility
   def transaction(key = 'store.yml')
-    puts "[DEBUG] Transaction data BEFORE block: #{@data.inspect}" # Log in-memory store
-    yield @data
-    puts "[DEBUG] Transaction data AFTER block: #{@data.inspect}"  # Log updated store
+    yield @data # Pass the in-memory store to the block for modification
     save_to_store(key, @data) # Save back to S3 after modifications
-    puts "[DEBUG] Data written to S3: #{@data.inspect}"            # Log what is written
   end
 
   # Adding hash-like access methods
