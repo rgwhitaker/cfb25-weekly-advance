@@ -36,9 +36,6 @@ WEEKS = [
   "Off-Season"
 ]
 
-# Initialize data store for persistence
-STORE = YAML::Store.new("week_data.yml")
-
 # URLs for the images
 TROPHY_IMAGE_URL = 'https://th.bing.com/th/id/OIP.nAcdTDznBgncq5df6MocPwAAAA?rs=1&pid=ImgDetMain'
 EMBED_IMAGE_URL = 'https://www.operationsports.com/wp-content/uploads/2024/02/IMG_4609.jpeg'
