@@ -38,11 +38,9 @@ def get_or_create_week_message(event, store)
   end
   puts "[DEBUG] Located 'week-advances' channel: #{channel.inspect}"
 
-  # Retrieve the saved message ID from the YAML-backed store
+  # Retrieve the saved message ID from storage
   saved_message_id = store.transaction do |data|
-    puts "[DEBUG] Current store contents inside transaction: #{data.inspect}" # Log before retrieving
-
-    # Safely retrieve message_id from both symbol and string keys
+    puts "[DEBUG] Current store contents inside transaction: #{data.inspect}"
     data[:message_id] || data['message_id']
   end
 
@@ -55,15 +53,15 @@ def get_or_create_week_message(event, store)
     rescue Discordrb::Errors::NoPermission
       puts "[ERROR] Bot does not have permission to access the saved message in the channel."
     rescue Discordrb::Errors::UnknownMessage
-      puts "[DEBUG] Saved message ID #{saved_message_id} does not exist, creating a new one."
+      puts "[DEBUG] Saved message ID #{saved_message_id} does not exist. Creating a new one."
     rescue => e
-      puts "[ERROR] An unexpected error occurred while fetching the message: #{e.message}."
+      puts "[ERROR] Unexpected error while fetching message: #{e.message}"
     end
   else
-    puts "[DEBUG] No saved message ID found in storage, creating a new message."
+    puts "[DEBUG] No saved message ID found in storage. Creating a new one."
   end
 
-  # Create a new message if no valid saved message exists
+  # Create a new message if one does not exist
   embed = create_default_week_embed
   puts "[DEBUG] Creating new week message with embed: #{embed.inspect}"
 
@@ -78,8 +76,9 @@ def get_or_create_week_message(event, store)
 
     return message
   rescue => e
-    # Log any unexpected errors
-    puts "[ERROR] Failed to send new message: #{e.message}"
+    # Log any unexpected errors during message creation
+    puts "[ERROR] Failed to create a new message: #{e.message}"
+    return nil
   end
 end
 
