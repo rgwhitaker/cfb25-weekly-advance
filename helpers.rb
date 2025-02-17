@@ -84,24 +84,6 @@ def get_or_create_week_message(event, store)
   return message
 end
 
-  # Create a new message if no valid saved message exists
-  embed = create_default_week_embed
-
-  # Debug: Validate embed before sending
-  puts "[DEBUG] Sending new embed message: #{embed.inspect}"
-
-  # Correct positional arguments for `send_message`
-  message = channel.send_message('', false, embed)
-
-  STORE.transaction do
-    STORE[:message_id] = message.id # Save the new message ID
-    # Debug: Confirm message ID is saved
-    puts "[DEBUG] New message ID saved: #{message.id}"
-  end
-
-  message
-end
-
 def send_lobby_notification(server, content)
   # Replace 'lobby' with the actual lobby channel name
   lobby_channel = server.channels.find { |channel| channel.name == 'lobby' }
