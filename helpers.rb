@@ -46,8 +46,8 @@ def get_or_create_week_message(event, store)
   end
 
   # Create a new message if no valid saved message exists
-  embed = create_default_week_embed # Placeholder for your embed creation logic
-  message = channel.send_message('', embed)
+  embed = create_default_week_embed
+  message = channel.send_message('', embed, tts: false) # Set tts explicitly to false
   STORE.transaction do
     STORE[:message_id] = message.id # Save the new message ID
   end
@@ -60,7 +60,7 @@ def send_lobby_notification(server, content)
   return unless lobby_channel
 
   # Send the ping message to the lobby channel
-  lobby_channel.send_message(content)
+  lobby_channel.send_message(content, tts: false) # Set tts explicitly to false
 end
 
 def message_link(guild_id, channel_id, message_id)
