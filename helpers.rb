@@ -111,3 +111,17 @@ def create_default_week_embed
 
   embed
 end
+
+# Shared helper function to update embed messages
+def update_embed_message(message, title, description, original_embed)
+  embed = create_embed(title, description, original_embed.color || 0x00FF00, EMBED_IMAGE_URL,
+                       FOOTER_TEXT, TROPHY_IMAGE_URL)
+  message.edit('', embed)
+end
+
+# Shared helper function to notify the lobby channel
+def notify_lobby(server, title, deadline, link)
+  content = "📢 everyone, the **#{title}**! 🏈\nDeadline: **#{deadline}**.\nView the full announcement here: [Click to view](#{link})"
+  send_lobby_notification(server, content)
+end
+
