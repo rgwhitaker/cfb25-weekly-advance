@@ -25,7 +25,7 @@ def create_embed(title, description, color, image_url, footer_text, footer_icon_
   embed
 end
 
-# Helper function to get or create the week message
+# Helper function to get or reuse the week message
 def get_or_create_week_message(event, store)
   week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
   return nil unless week_advances_channel
@@ -33,8 +33,14 @@ def get_or_create_week_message(event, store)
   store.transaction do
     week_message_id = store[:week_message_id]
     if week_message_id
-      message = week_advances_channel.load_message(week_message_id) rescue nil
-      return message if message
+      # Try to load the existing message by its ID
+      begin
+        message = week_advances_channel.load_message(week_message_id)
+        return message if message # Return the existing message if found
+      rescue Discordrb::Errors::NoPermission, Discordrb::Errors::NotFound
+        # If the message cannot be accessed or does not exist, continue to create a new one
+        store[:week_message_id] = nil
+      end
     end
 
     # Create a new message if no valid message is found

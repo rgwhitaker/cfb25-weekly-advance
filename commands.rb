@@ -51,7 +51,7 @@ def register_commands(bot)
   end
 
   # Command to set the current week manually
-  bot.command :set_week do |event, week|
+  bot.command :set_week do |event, *week_parts|
     message = get_or_create_week_message(event, STORE)
     unless message
       event.respond "The 'week-advances' channel was not found or unable to create the message."
@@ -59,23 +59,25 @@ def register_commands(bot)
     end
 
     current_week_index = STORE.transaction { STORE[:current_week_index] } || 0
+    week = week_parts.join(" ").strip
 
-    if week =~ /^\d+$/
+    if week =~ /^\d+$/ # Handle as a week number
       week_number = week.to_i
       if week_number < 1 || week_number > WEEKS.length
         event.respond "Invalid week number. Please provide a number between 1 and #{WEEKS.length}."
         next
       end
       current_week_index = week_number - 1
-    else
-      week_index = WEEKS.index { |w| w.casecmp(week).zero? }
-      if week_index.nil?
-        event.respond "Invalid week name. Please provide a valid week name or number."
+    else # Handle as a partial or full week name
+      matching_week = WEEKS.find { |w| w.downcase.include?(week.downcase) }
+      if matching_week.nil?
+        event.respond "Invalid week name. Please provide a valid week name or number. Use partial names like 'Week 1' or 'Championship'."
         next
       end
-      current_week_index = week_index
+      current_week_index = WEEKS.index(matching_week)
     end
 
+    # Update the current week in the store
     STORE.transaction do
       STORE[:current_week_index] = current_week_index
     end
@@ -94,7 +96,7 @@ def register_commands(bot)
                            FOOTER_TEXT, TROPHY_IMAGE_URL)
       message.edit('', embed)
 
-      event.respond "Current week set to #{current_week_name} (#{formatted_deadline})."
+      event.respond "Current week set to **#{current_week_name}** (#{formatted_deadline})."
 
       # Construct the message link
       link = message_link(event.server.id, message.channel.id, message.id)
