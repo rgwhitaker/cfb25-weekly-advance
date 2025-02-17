@@ -20,17 +20,57 @@ end
 
 # Command: !initialize
 def initialize_week_advances(bot, store)
-  bot.command(:initialize) do |event|
-    # Get the member object of the user who triggered the command
+  bot.command(:initialize) do |event, *args|
+    # Ensure the user has permissions
     member = event.server.member(event.user.id)
-
-    # Check if the member has administrator permissions
     unless member.permission?(:administrator) || member.id == event.server.owner.id
       event.respond("❌ You don't have permissions to initialize the bot.")
       next
     end
 
-    # Step 1: Verify or create the 'week-advances' channel
+    # Parse optional arguments: week name and deadline
+    input_week = args[0]  # First argument: week name
+    input_deadline = args[1..].join(" ")  # Remaining arguments: deadline string
+
+    # Step 1: Validate and set the week index
+    current_week_index = 0
+    if input_week
+      matching_week = WEEKS.find { |w| w.downcase.include?(input_week.downcase) }
+      if matching_week
+        current_week_index = WEEKS.index(matching_week)
+      else
+        event.respond("❌ Invalid week name: `#{input_week}`. Please provide a valid week name or omit it to start at the first week.")
+        next
+      end
+    end
+    current_week_name = WEEKS[current_week_index]
+
+    # Step 2: Validate and set the deadline
+    formatted_deadline = nil
+    if input_deadline && !input_deadline.strip.empty?
+      begin
+        if Date::DAYNAMES.any? { |day| input_deadline.start_with?(day) }
+          # Parse "Wednesday at 5:00 PM"-style strings
+          day_name, time_part = input_deadline.split(" at ", 2)
+          target_time = next_weekday(day_name.capitalize)
+          full_time = "#{target_time.strftime('%Y-%m-%d')} #{time_part.strip}"
+          deadline = Time.parse(full_time).in_time_zone('Eastern Time (US & Canada)')
+        else
+          # Parse standard date/time formats (e.g., ISO 8601)
+          deadline = Time.parse(input_deadline).in_time_zone('Eastern Time (US & Canada)')
+        end
+        formatted_deadline = format_deadline(deadline.to_s)
+      rescue StandardError => e
+        event.respond("❌ Invalid deadline: `#{input_deadline}`. Please provide a valid date, such as `2025-02-20 17:00` or `Wednesday at 5:00 PM`.")
+        next
+      end
+    else
+      # Default deadline is 48 hours from now
+      deadline = Time.now.in_time_zone('Eastern Time (US & Canada)') + 48.hours
+      formatted_deadline = format_deadline(deadline.to_s)
+    end
+
+    # Step 3: Verify or create the 'week-advances' channel
     channel_name = 'week-advances'
     channel = event.server.channels.find { |ch| ch.name == channel_name }
 
@@ -46,38 +86,30 @@ def initialize_week_advances(bot, store)
       event.respond("✅ Found existing channel: `#{channel_name}`.")
     end
 
-    # Step 2: Create or verify the week message
-    saved_message_id = store.transaction { |data| data[:message_id] }
-
-    if saved_message_id
-      begin
-        # Attempt to load the existing message
-        existing_message = channel.load_message(saved_message_id.to_s)
-        if existing_message
-          event.respond("✅ Found existing week message with ID #{saved_message_id}.")
-          next
-        end
-      rescue Discordrb::Errors::UnknownMessage
-        event.respond("⚠️ Message ID #{saved_message_id} not found in `#{channel_name}`.")
-      rescue StandardError => e
-        event.respond("❌ Error loading message ID #{saved_message_id}: #{e.message}")
-      end
+    # Step 4: Save the initial state in the STORE
+    store.transaction do |data|
+      data[:current_week_index] = current_week_index
+      data[:current_deadline] = formatted_deadline
     end
 
-    # Step 3: If no valid message exists, create a new one
+    # Step 5: Create the first embed message with the week and deadline
+    embed = Discordrb::Webhooks::Embed.new(
+      title: "#{current_week_name} has started!",
+      description: "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈",
+      color: 0x00FF00 # Green color
+    )
+
     begin
-      embed = create_default_week_embed
       new_message = channel.send_message('', false, embed)
 
-      # Save the message ID
+      # Save the message ID in the STORE
       store.transaction do |data|
         data[:message_id] = new_message.id
-        data[:current_week_index] = 0 # Initialize current state
       end
 
-      event.respond("✅ Created new week message and saved it with ID #{new_message.id}.")
+      event.respond("✅ Initialization complete: **#{current_week_name}** has started, and the deadline is set to #{formatted_deadline}.")
     rescue StandardError => e
-      event.respond("❌ Failed to create a new message in `#{channel_name}`: #{e.message}")
+      event.respond("❌ Failed to create the initial message in `#{channel_name}`: #{e.message}")
     end
   end
 end
