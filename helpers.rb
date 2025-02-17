@@ -1,5 +1,8 @@
 # helpers.rb
 require 'discordrb'
+require 'date'
+require 'time'
+
 
 # Helper function to calculate advance time while skipping Saturdays
 def calculate_advance_time(start_time, duration_in_hours)
@@ -61,4 +64,15 @@ end
 
 def message_link(guild_id, channel_id, message_id)
   "https://discord.com/channels/#{guild_id}/#{channel_id}/#{message_id}"
+end
+
+# Helper to resolve next occurrence of a specific day (e.g., "Tuesday")
+def next_weekday(day_name)
+  current_time = Time.now
+  target_day = Date::DAYNAMES.find_index(day_name.capitalize)
+  return nil unless target_day
+
+  days_ahead = (target_day - current_time.wday) % 7
+  days_ahead = 7 if days_ahead == 0 # If today is the target day, move it to the next week
+  current_time + (days_ahead * 24 * 60 * 60) # Add days in seconds
 end
