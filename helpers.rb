@@ -60,7 +60,7 @@ def get_or_create_week_message(event, store)
   puts "[DEBUG] Sending new embed message: #{embed.inspect}"
 
   # Correct positional arguments for `send_message`
-  message = channel.safe_send_message('', false, embed)
+  message = safe_send_message(channel, '', embed)
 
   STORE.transaction do
     STORE[:message_id] = message.id # Save the new message ID
@@ -77,7 +77,7 @@ def send_lobby_notification(server, content)
   return unless lobby_channel
 
   # Send the ping message to the lobby channel
-  lobby_channel.safe_send_message(content, false) # Set tts explicitly to false
+  safe_send_message(lobby_channel, content, nil)
 end
 
 def message_link(guild_id, channel_id, message_id)
@@ -116,7 +116,7 @@ end
 def update_embed_message(message, title, description, original_embed)
   embed = create_embed(title, description, original_embed.color || 0x00FF00, EMBED_IMAGE_URL,
                        FOOTER_TEXT, TROPHY_IMAGE_URL)
-  message.safe_edit_message('', embed)
+  safe_edit_message(message, '', embed)
 end
 
 # Shared helper function to notify the lobby channel
