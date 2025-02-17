@@ -30,65 +30,47 @@ end
 
 # Helper function to get or reuse the week message
 def get_or_create_week_message(event, store)
-  # Step 1: Find the 'week-advances' channel
+  # Locate the 'week-advances' channel in the server
   channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
   unless channel
-    puts "[WARN] Could not find the 'week-advances' channel in the server."
+    puts "[ERROR] Channel 'week-advances' not found. Bot cannot proceed."
     return nil
   end
-  puts "[DEBUG] Located 'week-advances' channel: #{channel.inspect}"
+  puts "[INFO] Found 'week-advances' channel: #{channel.inspect}"
 
-  # Step 2: Retrieve the saved message ID from storage
+  # Attempt to load the stored message ID from S3
   saved_message_id = store.transaction do |data|
-    puts "[DEBUG] Current store contents inside transaction: #{data.inspect}"
-    data[:message_id] || data['message_id']
+    data[:message_id]
   end
+  puts "[INFO] Loaded saved message ID: #{saved_message_id.inspect}"
 
   if saved_message_id
-    puts "[DEBUG] Saved message ID found in store: #{saved_message_id}"
     begin
-      # Step 3: Attempt to retrieve the existing message
+      # Try to fetch the existing message from the channel
       message = channel.message(saved_message_id)
       if message
-        puts "[DEBUG] Successfully retrieved message with ID: #{saved_message_id}"
-
-        # Step 4: Edit this existing message instead of creating a new one
-        embed = create_default_week_embed
-        puts "[DEBUG] Editing existing message with new embed: #{embed.inspect}"
-        message.edit('', embed) # Edit the message with the new content
+        puts "[INFO] Successfully retrieved message with ID #{saved_message_id}"
         return message
       else
-        puts "[WARN] Message with ID #{saved_message_id} cannot be retrieved but no error was raised."
+        puts "[WARN] Message ID #{saved_message_id} not found in the 'week-advances' channel."
       end
     rescue Discordrb::Errors::UnknownMessage
-      puts "[WARN] Message with ID #{saved_message_id} was not found (possibly deleted)."
-    rescue Discordrb::Errors::NoPermission
-      puts "[ERROR] Bot lacks permissions to fetch or edit the message in the channel."
-    rescue => e
-      puts "[ERROR] Unexpected error while retrieving or editing the message: #{e.class} - #{e.message}"
+      puts "[WARN] The message with ID #{saved_message_id} could not be found or was deleted."
+    rescue StandardError => e
+      puts "[ERROR] Error retrieving message with ID #{saved_message_id}: #{e.message}"
     end
   else
-    puts "[DEBUG] No saved message ID found in storage. Going to create a new one."
+    puts "[INFO] No saved message ID found; creating a new message..."
   end
 
-  # Step 5: Create a new message if no valid one exists
-  embed = create_default_week_embed
-  puts "[DEBUG] Creating a new week message with embed: #{embed.inspect}"
-
-  begin
-    message = safe_send_message(channel, '', embed)
-
-    # Step 6: Save the new message ID in the YAML store
-    store.transaction do |data|
-      data[:message_id] = message.id
-      puts "[DEBUG] Saved newly created message ID to store: #{data[:message_id]}"
-    end
-
-    return message
-  rescue => e
-    puts "[ERROR] Failed to create a new message: #{e.message}"
-    return nil
+  # If no message was found, create a new one
+  embed = create_default_week_embed # This should create an empty embed for Week 0
+  new_message = channel.send_message('', false, embed)
+  store.transaction do |data|
+    data[:message_id] = new_message.id
+    puts "[INFO] Saved new message with ID #{new_message.id} to the store."
   end
+  return new_message
 end
 
 def send_lobby_notification(server, content)
