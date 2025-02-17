@@ -30,27 +30,28 @@ end
 
 # Helper function to get or reuse the week message
 def get_or_create_week_message(event, store)
-  week_advances_channel = event.server.channels.find { |c| c.name == 'week-advances' }
-  return nil unless week_advances_channel
+  channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+  return nil unless channel
 
-  store.transaction do
-    week_message_id = store[:week_message_id]
-    if week_message_id
-      # Try to load the existing message by its ID
-      begin
-        message = week_advances_channel.load_message(week_message_id)
-        return message if message # Return the existing message if found
-      rescue Discordrb::Errors::NoPermission, Discordrb::Errors::NotFound
-        # If the message cannot be accessed or does not exist, continue to create a new one
-        store[:week_message_id] = nil
-      end
+  saved_message_id = STORE.transaction { STORE[:message_id] }
+
+  if saved_message_id
+    begin
+      # Attempt to fetch the existing message
+      message = channel.message(saved_message_id)
+      return message
+    rescue Discordrb::Errors::NoPermission, Discordrb::Errors::UnknownMessage
+      # If permission or message not found, fall through to create a new one
     end
-
-    # Create a new message if no valid message is found
-    new_message = week_advances_channel.send_message("Week advances information will be updated here.")
-    store[:week_message_id] = new_message.id
-    new_message
   end
+
+  # Create a new message if no valid saved message exists
+  embed = create_default_week_embed # Placeholder for your embed creation logic
+  message = channel.send_message('', embed)
+  STORE.transaction do
+    STORE[:message_id] = message.id # Save the new message ID
+  end
+  message
 end
 
 def send_lobby_notification(server, content)
