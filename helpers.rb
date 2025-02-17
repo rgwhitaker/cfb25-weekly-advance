@@ -35,24 +35,44 @@ def get_or_create_week_message(event, store)
 
   saved_message_id = STORE.transaction { STORE[:message_id] }
 
-  if saved_message_id
-    begin
-      # Attempt to fetch the existing message
-      message = channel.message(saved_message_id)
-      return message
-    rescue Discordrb::Errors::NoPermission, Discordrb::Errors::UnknownMessage
-      # If permission or message not found, fall through to create a new one
+  # Debug: Validate saved message ID
+  puts "[DEBUG] Retrieved saved_message_id: #{saved_message_id.inspect}"
+
+  begin
+    saved_message_id = STORE.transaction { STORE[:message_id] }
+
+    # Additional safeguard against nil or invalid IDs
+    if saved_message_id.nil? || saved_message_id.to_s.empty?
+      puts "[DEBUG] No valid saved message ID found. Creating a new message."
+      raise Discordrb::Errors::UnknownMessage
     end
+
+    message = channel.message(saved_message_id)
+    puts "[DEBUG] Successfully retrieved message: #{message.id}"
+    return message
+  rescue StandardError => e
+    puts "[DEBUG] Exception while retrieving or sending message: #{e.message}"
+    # Fall back to creating a new message
   end
+
 
   # Create a new message if no valid saved message exists
   embed = create_default_week_embed
-  message = channel.send_message('', embed, tts: false) # Set tts explicitly to false
+
+  # Debug: Validate embed before sending
+  puts "[DEBUG] Sending new embed message: #{embed.inspect}"
+
+  message = channel.send_message('', embed: embed, tts: false)
+
   STORE.transaction do
-    STORE[:message_id] = message.id # Save the new message ID
+    STORE[:message_id] = message.id
+    # Debug: Confirm stored ID
+    puts "[DEBUG] Message ID stored in STORE: #{STORE[:message_id].inspect}"
   end
+
   message
 end
+
 
 def send_lobby_notification(server, content)
   # Replace 'lobby' with the actual lobby channel name
@@ -83,9 +103,14 @@ def create_default_week_embed
   title = "Welcome to the New Week!"
   description = "🏈 A new week has begun! Complete your recruiting and games before the deadline. 🏈"
   color = 0x00FF00 # Green color
-  image_url = "https://example.com/placeholder-image.png" # Replace this with your embed image URL
+  image_url = "https://example.com/placeholder-image.png" # Replace with your embed image URL
   footer_text = "League Updates"
   footer_icon_url = "https://example.com/placeholder-footer-icon.png" # Replace with your footer icon URL
 
-  create_embed(title, description, color, image_url, footer_text, footer_icon_url)
+  embed = create_embed(title, description, color, image_url, footer_text, footer_icon_url)
+
+  # Debug: Inspect the embed object
+  puts "[DEBUG] Created default embed: #{embed.inspect}"
+
+  embed
 end
