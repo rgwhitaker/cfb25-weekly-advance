@@ -1,4 +1,5 @@
 require 'yaml'
+require 'aws-sdk-s3'
 
 class S3Store
   def initialize(bucket_name, region)
