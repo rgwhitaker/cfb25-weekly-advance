@@ -30,47 +30,33 @@ end
 
 # Helper function to get or reuse the week message
 def get_or_create_week_message(event, store)
-  # Locate the 'week-advances' channel in the server
-  channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+  # Find or create the 'week-advances' channel
+  channel_name = 'week-advances'
+  channel = event.server.channels.find { |ch| ch.name == channel_name }
   unless channel
-    puts "[ERROR] Channel 'week-advances' not found. Bot cannot proceed."
-    return nil
+    channel = event.server.create_channel(channel_name, 0)
   end
-  puts "[INFO] Found 'week-advances' channel: #{channel.inspect}"
 
-  # Attempt to load the stored message ID from S3
-  saved_message_id = store.transaction do |data|
-    data[:message_id]
-  end
-  puts "[INFO] Loaded saved message ID: #{saved_message_id.inspect}"
-
-  if saved_message_id
+  # Try loading the existing message by ID
+  message_id = store.transaction { |data| data[:message_id] }
+  if message_id
     begin
-      # Try to fetch the existing message from the channel
-      message = channel.load_message(saved_message_id.to_s)
-      if message
-        puts "[INFO] Successfully retrieved message with ID #{saved_message_id}"
-        return message
-      else
-        puts "[WARN] Message ID #{saved_message_id} not found in the 'week-advances' channel."
-      end
+      return channel.load_message(message_id) # Load the message successfully
     rescue Discordrb::Errors::UnknownMessage
-      puts "[WARN] The message with ID #{saved_message_id} could not be found or was deleted."
-    rescue StandardError => e
-      puts "[ERROR] Error retrieving message with ID #{saved_message_id}: #{e.message}"
+      # Message was deleted; we will need to recreate it
     end
-  else
-    puts "[INFO] No saved message ID found; creating a new message..."
   end
 
-  # If no message was found, create a new one
-  embed = create_default_week_embed # This should create an empty embed for Week 0
+  # If no message exists, create a new one and save its ID
+  embed = Discordrb::Webhooks::Embed.new(
+    title: "Initialization Message",
+    description: "🏈 Current week and deadline will be shown here. 🏈",
+    color: 0x00FF00 # Green for success
+  )
   new_message = channel.send_message('', false, embed)
-  store.transaction do |data|
-    data[:message_id] = new_message.id
-    puts "[INFO] Saved new message with ID #{new_message.id} to the store."
-  end
-  return new_message
+  store.transaction { |data| data[:message_id] = new_message.id } # Save the new message ID
+
+  new_message
 end
 
 def send_lobby_notification(server, content)
