@@ -141,10 +141,14 @@ end
 
 def load_data_from_s3(store)
   store.transaction do |data|
+    puts "[DEBUG] Raw data from S3: #{data.inspect}"
     current_week_index = data[:current_week_index] || 0
     current_deadline = data[:current_deadline] || "No deadline set"
     message_id = data[:message_id]
     puts "[DEBUG] Loaded data from S3: current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
     [current_week_index, current_deadline, message_id]
   end
+rescue => e
+  puts "[ERROR] Failed to load data from S3: #{e.message}\n#{e.backtrace.join("\n")}"
+  [nil, nil, nil]
 end

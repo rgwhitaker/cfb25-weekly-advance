@@ -86,43 +86,48 @@ end
 # Command: !advance_week
 def advance_week(bot, store)
   bot.command :advance_week do |event, duration_in_hours = '48'|
-    # Load data from S3 bucket
-    current_week_index, current_deadline, message_id = load_data_from_s3(store)
-    puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
-
-    # Ensure data is not nil
-    if current_week_index.nil? || current_deadline.nil? || message_id.nil?
-      event.respond "Error: Data not loaded correctly from S3."
-      puts "[ERROR] Data not loaded correctly from S3: current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
-      next
-    end
-
-    # Find or create the 'week-advances' channel
-    message = get_or_create_week_message(event, store)
-    unless message
-      event.respond "The 'week-advances' channel was not found or unable to create the message."
-      next
-    end
-
-    current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
-    advance_time = calculate_advance_time(current_time, duration_in_hours)
-    advance_time_str = format_deadline(advance_time.to_s)
-    current_week_index = (current_week_index + 1) % WEEKS.length
-
-    # Update data in S3 bucket
-    store_data_to_s3(store, current_week_index, advance_time_str, message.id)
-    puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
-
-    next_week_name = WEEKS[current_week_index]
-    description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
-
     begin
-      update_embed_message(message, "#{next_week_name} has started!", description, message.embeds.first)
-      event.respond "Week advanced to #{next_week_name}, and the deadline is set to #{advance_time_str}."
-      link = message_link(event.server.id, message.channel.id, message.id)
-      notify_lobby(event.server, "week has advanced to **#{next_week_name}**", advance_time_str, link)
-    rescue Discordrb::Errors::NoPermission
-      event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+      # Load data from S3 bucket
+      current_week_index, current_deadline, message_id = load_data_from_s3(store)
+      puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+
+      # Ensure data is not nil
+      if current_week_index.nil? || current_deadline.nil? || message_id.nil?
+        event.respond "Error: Data not loaded correctly from S3."
+        puts "[ERROR] Data not loaded correctly from S3: current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+        next
+      end
+
+      # Find or create the 'week-advances' channel
+      message = get_or_create_week_message(event, store)
+      unless message
+        event.respond "The 'week-advances' channel was not found or unable to create the message."
+        next
+      end
+
+      current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
+      advance_time = calculate_advance_time(current_time, duration_in_hours)
+      advance_time_str = format_deadline(advance_time.to_s)
+      current_week_index = (current_week_index + 1) % WEEKS.length
+
+      # Update data in S3 bucket
+      store_data_to_s3(store, current_week_index, advance_time_str, message.id)
+      puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
+
+      next_week_name = WEEKS[current_week_index]
+      description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
+
+      begin
+        update_embed_message(message, "#{next_week_name} has started!", description, message.embeds.first)
+        event.respond "Week advanced to #{next_week_name}, and the deadline is set to #{advance_time_str}."
+        link = message_link(event.server.id, message.channel.id, message.id)
+        notify_lobby(event.server, "week has advanced to **#{next_week_name}**", advance_time_str, link)
+      rescue Discordrb::Errors::NoPermission
+        event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+      end
+    rescue => e
+      event.respond "An error occurred: #{e.message}"
+      puts "[ERROR] An error occurred in advance_week: #{e.message}\n#{e.backtrace.join("\n")}"
     end
   end
 end
