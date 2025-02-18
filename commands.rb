@@ -93,6 +93,7 @@ def advance_week(bot, store)
     # Ensure data is not nil
     if current_week_index.nil? || current_deadline.nil? || message_id.nil?
       event.respond "Error: Data not loaded correctly from S3."
+      puts "[ERROR] Data not loaded correctly from S3: current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
       next
     end
 
