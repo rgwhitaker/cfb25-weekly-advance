@@ -91,7 +91,7 @@ def advance_week(bot, store)
     puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index}, current_deadline=#{current_deadline}, message_id=#{message_id}"
 
     # Find or create the 'week-advances' channel
-    message = get_or_create_week_message(event, store, message_id)
+    message = get_or_create_week_message(event, store)
     unless message
       event.respond "The 'week-advances' channel was not found or unable to create the message."
       next

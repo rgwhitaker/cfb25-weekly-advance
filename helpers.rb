@@ -38,7 +38,7 @@ def get_or_create_week_message(event, store)
   end
 
   # Try loading the existing message by ID
-  message_id = store.transaction { |data| data[:message_id] }
+  message_id = store.transaction { store[:message_id] }
   if message_id
     begin
       return channel.load_message(message_id) # Load the message successfully
