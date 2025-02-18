@@ -140,6 +140,7 @@ def safe_edit_message(message, content, embed)
 end
 
 def load_data_from_s3(store)
+  puts "[DEBUG] load_data_from_s3: Starting data load from S3"
   store.transaction do |data|
     puts "[DEBUG] Raw data from S3: #{data.inspect}"
     current_week_index = data[:current_week_index] || 0

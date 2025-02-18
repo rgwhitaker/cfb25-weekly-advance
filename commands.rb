@@ -88,6 +88,7 @@ def advance_week(bot, store)
   bot.command :advance_week do |event, duration_in_hours = '48'|
     begin
       # Load data from S3 bucket
+      puts "[DEBUG] advance_week: Attempting to load data from S3"
       current_week_index, current_deadline, message_id = load_data_from_s3(store)
       puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
 
@@ -99,6 +100,7 @@ def advance_week(bot, store)
       end
 
       # Find or create the 'week-advances' channel
+      puts "[DEBUG] advance_week: Attempting to get or create week message"
       message = get_or_create_week_message(event, store)
       unless message
         event.respond "The 'week-advances' channel was not found or unable to create the message."
@@ -111,6 +113,7 @@ def advance_week(bot, store)
       current_week_index = (current_week_index + 1) % WEEKS.length
 
       # Update data in S3 bucket
+      puts "[DEBUG] advance_week: Attempting to store data to S3"
       store_data_to_s3(store, current_week_index, advance_time_str, message.id)
       puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
 
