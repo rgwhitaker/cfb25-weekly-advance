@@ -88,7 +88,13 @@ def advance_week(bot, store)
   bot.command :advance_week do |event, duration_in_hours = '48'|
     # Load data from S3 bucket
     current_week_index, current_deadline, message_id = load_data_from_s3(store)
-    puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index}, current_deadline=#{current_deadline}, message_id=#{message_id}"
+    puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+
+    # Ensure data is not nil
+    if current_week_index.nil? || current_deadline.nil? || message_id.nil?
+      event.respond "Error: Data not loaded correctly from S3."
+      next
+    end
 
     # Find or create the 'week-advances' channel
     message = get_or_create_week_message(event, store)
@@ -104,7 +110,7 @@ def advance_week(bot, store)
 
     # Update data in S3 bucket
     store_data_to_s3(store, current_week_index, advance_time_str, message.id)
-    puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index}, advance_time_str=#{advance_time_str}, message_id=#{message.id}"
+    puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
 
     next_week_name = WEEKS[current_week_index]
     description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
