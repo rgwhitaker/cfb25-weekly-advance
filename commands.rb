@@ -86,23 +86,25 @@ end
 # Command: !advance_week
 def advance_week(bot, store)
   bot.command :advance_week do |event, duration_in_hours = '48'|
-    message = get_or_create_week_message(event, store)
+    # Load data from S3 bucket
+    current_week_index, current_deadline, message_id = load_data_from_s3(store)
+    puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index}, current_deadline=#{current_deadline}, message_id=#{message_id}"
+
+    # Find or create the 'week-advances' channel
+    message = get_or_create_week_message(event, store, message_id)
     unless message
       event.respond "The 'week-advances' channel was not found or unable to create the message."
       next
     end
 
-    current_week_index = store.transaction { store[:current_week_index] } || 0
-    current_week_name = WEEKS[current_week_index]
     current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
     advance_time = calculate_advance_time(current_time, duration_in_hours)
     advance_time_str = format_deadline(advance_time.to_s)
     current_week_index = (current_week_index + 1) % WEEKS.length
 
-    store.transaction do
-      store[:current_week_index] = current_week_index
-      store[:current_deadline] = advance_time_str
-    end
+    # Update data in S3 bucket
+    store_data_to_s3(store, current_week_index, advance_time_str, message.id)
+    puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index}, advance_time_str=#{advance_time_str}, message_id=#{message.id}"
 
     next_week_name = WEEKS[current_week_index]
     description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
