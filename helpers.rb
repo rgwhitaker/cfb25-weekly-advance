@@ -109,7 +109,7 @@ end
 
 # Shared helper function to notify the lobby channel
 def notify_lobby(server, title, deadline, link)
-  content = "📢 everyone, the **#{title}**! 🏈\nDeadline: **#{deadline}**.\nView the full announcement here: [Click to view](#{link})"
+  content = "📢 @everyone, the **#{title}**! 🏈\nDeadline: **#{deadline}**.\nView the full announcement here: [Click to view](#{link})"
   send_lobby_notification(server, content)
 end
 
