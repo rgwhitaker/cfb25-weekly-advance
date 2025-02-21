@@ -244,6 +244,7 @@ def set_deadline(bot, store)
           event.respond "Invalid format. Please use format like 'Monday 9AM' or 'Monday at 9AM'"
           next
         end
+        end
 
       # Update data in S3
       puts "[DEBUG] set_deadline: Attempting to store data to S3"
