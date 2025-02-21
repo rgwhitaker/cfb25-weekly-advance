@@ -146,17 +146,24 @@ def load_data_from_s3(store)
   raw_data = store.load_store('store.yml')
   puts "[DEBUG] Raw YAML data from S3: #{raw_data.inspect}"
 
-  # Change this section to directly access the raw_data hash
-  message_id = raw_data&.[](:message_id)
-  current_week_index = raw_data&.[](:current_week_index) || 0
-  current_deadline = raw_data&.[](:current_deadline) || "No deadline set"
+  # Return early if no data found
+  if raw_data.nil? || !raw_data.is_a?(Hash)
+    puts "[ERROR] Invalid or missing data in S3"
+    return [nil, nil, nil]
+  end
+
+  # Extract values directly from raw_data hash
+  message_id = raw_data[:message_id]
+  current_week_index = raw_data[:current_week_index]
+  current_deadline = raw_data[:current_deadline]
 
   puts "[DEBUG] Loaded data from S3:"
   puts "- message_id: #{message_id}"
   puts "- current_week_index: #{current_week_index}"
   puts "- current_deadline: #{current_deadline}"
 
-  [current_week_index, current_deadline, message_id]
+  # Return array with extracted values
+  return [current_week_index, current_deadline, message_id]
 rescue => e
   puts "[ERROR] Failed to load data from S3: #{e.message}"
   puts "[ERROR] Backtrace: #{e.backtrace[0..5].join("\n")}"
@@ -170,12 +177,18 @@ def store_data_to_s3(store, current_week_index, current_deadline, message_id)
   puts "- message_id: #{message_id}"
 
   data = {
+    message_id: message_id,
     current_week_index: current_week_index,
-    current_deadline: current_deadline,
-    message_id: message_id
+    current_deadline: current_deadline
   }
 
+  # Verify data structure before storing
+  puts "[DEBUG] Data to be stored: #{data.inspect}"
   store.save_to_store('store.yml', data)
+
+  # Verify stored data
+  stored_data = store.load_store('store.yml')
+  puts "[DEBUG] Verification of stored data: #{stored_data.inspect}"
 rescue => e
   puts "[ERROR] Failed to store data to S3: #{e.message}"
   puts "[ERROR] Backtrace: #{e.backtrace[0..5].join("\n")}"
