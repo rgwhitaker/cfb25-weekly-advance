@@ -142,33 +142,21 @@ end
 def load_data_from_s3(store)
   puts "[DEBUG] load_data_from_s3: Starting data load from S3"
 
-  # First, explicitly load the YAML from S3
+  # Load raw data from S3
   raw_data = store.load_store('store.yml')
   puts "[DEBUG] Raw YAML data from S3: #{raw_data.inspect}"
 
-  # If raw_data is nil or empty, return early
-  if raw_data.nil? || raw_data.empty?
-    puts "[ERROR] No data found in S3 store"
-    return [nil, nil, nil]
-  end
+  # Change this section to directly access the raw_data hash
+  message_id = raw_data&.[](:message_id)
+  current_week_index = raw_data&.[](:current_week_index) || 0
+  current_deadline = raw_data&.[](:current_deadline) || "No deadline set"
 
-  store.transaction do |data|
-    message_id = data[:message_id]
-    if message_id.nil?
-      puts "[ERROR] No message_id found in store data"
-      return [nil, nil, nil]
-    end
+  puts "[DEBUG] Loaded data from S3:"
+  puts "- message_id: #{message_id}"
+  puts "- current_week_index: #{current_week_index}"
+  puts "- current_deadline: #{current_deadline}"
 
-    current_week_index = data[:current_week_index] || 0
-    current_deadline = data[:current_deadline] || "No deadline set"
-
-    puts "[DEBUG] Loaded data from S3:"
-    puts "- message_id: #{message_id}"
-    puts "- current_week_index: #{current_week_index}"
-    puts "- current_deadline: #{current_deadline}"
-
-    [current_week_index, current_deadline, message_id]
-  end
+  [current_week_index, current_deadline, message_id]
 rescue => e
   puts "[ERROR] Failed to load data from S3: #{e.message}"
   puts "[ERROR] Backtrace: #{e.backtrace[0..5].join("\n")}"
@@ -176,15 +164,19 @@ rescue => e
 end
 
 def store_data_to_s3(store, current_week_index, current_deadline, message_id)
-  puts "[DEBUG] store_data_to_s3: Storing data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
-  store.transaction do |data|
-    data[:current_week_index] = current_week_index
-    data[:current_deadline] = current_deadline
-    data[:message_id] = message_id
-  end
-  # Verify the stored data
-  stored_data = store.transaction { store.roots }
-  puts "[DEBUG] store_data_to_s3: Verified stored data - #{stored_data.inspect}"
+  puts "[DEBUG] store_data_to_s3: Storing data"
+  puts "- current_week_index: #{current_week_index}"
+  puts "- current_deadline: #{current_deadline}"
+  puts "- message_id: #{message_id}"
+
+  data = {
+    current_week_index: current_week_index,
+    current_deadline: current_deadline,
+    message_id: message_id
+  }
+
+  store.save_to_store('store.yml', data)
 rescue => e
-  puts "[ERROR] Failed to store data to S3: #{e.message}\n#{e.backtrace.join("\n")}"
+  puts "[ERROR] Failed to store data to S3: #{e.message}"
+  puts "[ERROR] Backtrace: #{e.backtrace[0..5].join("\n")}"
 end
