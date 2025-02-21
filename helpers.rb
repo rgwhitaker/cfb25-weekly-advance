@@ -153,3 +153,17 @@ rescue => e
   puts "[ERROR] Failed to load data from S3: #{e.message}\n#{e.backtrace.join("\n")}"
   [nil, nil, nil]
 end
+
+def store_data_to_s3(store, current_week_index, current_deadline, message_id)
+  puts "[DEBUG] store_data_to_s3: Storing data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+  store.transaction do |data|
+    data[:current_week_index] = current_week_index
+    data[:current_deadline] = current_deadline
+    data[:message_id] = message_id
+  end
+  # Verify the stored data
+  stored_data = store.transaction { store.roots }
+  puts "[DEBUG] store_data_to_s3: Verified stored data - #{stored_data.inspect}"
+rescue => e
+  puts "[ERROR] Failed to store data to S3: #{e.message}\n#{e.backtrace.join("\n")}"
+end

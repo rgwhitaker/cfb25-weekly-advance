@@ -41,45 +41,17 @@ def initialize_week_advances(bot, store)
       end
     end
 
-    # Step 2: Get current message ID from the store
-    message_id = nil
-    store.transaction do |data|
-      message_id = data[:message_id]
-    end
-
-    # Step 3: Try to load the message using the stored ID
-    message = nil
-    if message_id
-      begin
-        message = channel.load_message(message_id)
-        event.respond("ℹ️ Located existing message with ID #{message_id}.")
-      rescue Discordrb::Errors::UnknownMessage
-        event.respond("⚠️ Message ID #{message_id} not found. Creating a new one.")
-        message = nil
-      end
-    else
-      event.respond("ℹ️ No message ID stored. Creating a new message.")
-    end
-
-    # Step 4: Create or edit the message
+    # Step 2: Create a new message and store its ID
     embed = Discordrb::Webhooks::Embed.new(
       title: "Welcome to the New Week!",
       description: "🏈 This is your updated week setup! Go get it! 🏈",
       color: 0x00FF00 # Green color for success
     )
-
-    if message
-      # Update the existing message
-      message.edit('', embed)
-      event.respond("✅ Successfully updated the existing message.")
-    else
-      # Create a new message and store its ID
-      new_message = channel.send_message('', false, embed)
-      store.transaction do |data|
-        data[:message_id] = new_message.id
-      end
-      event.respond("✅ Created a new message and saved its ID.")
+    new_message = channel.send_message('', false, embed)
+    store.transaction do |data|
+      data[:message_id] = new_message.id
     end
+    event.respond("✅ Created a new message and saved its ID.")
   end
 end
 
@@ -92,18 +64,23 @@ def advance_week(bot, store)
       current_week_index, current_deadline, message_id = load_data_from_s3(store)
       puts "[DEBUG] advance_week: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
 
-      # Ensure data is not nil
-      if current_week_index.nil? || current_deadline.nil? || message_id.nil?
-        event.respond "Error: Data not loaded correctly from S3."
-        puts "[ERROR] Data not loaded correctly from S3: current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+      # Ensure message ID is not nil
+      if message_id.nil?
+        event.respond "Error: No existing message found. Please run `!initialize` first."
+        puts "[ERROR] No existing message found: message_id=#{message_id.inspect}"
         next
       end
 
-      # Find or create the 'week-advances' channel
-      puts "[DEBUG] advance_week: Attempting to get or create week message"
-      message = get_or_create_week_message(event, store)
+      # Find the 'week-advances' channel and load the message
+      channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+      unless channel
+        event.respond "The 'week-advances' channel was not found."
+        next
+      end
+
+      message = channel.load_message(message_id)
       unless message
-        event.respond "The 'week-advances' channel was not found or unable to create the message."
+        event.respond "The message with ID #{message_id} was not found. Please run `!initialize` first."
         next
       end
 
