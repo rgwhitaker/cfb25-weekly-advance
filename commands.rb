@@ -207,7 +207,10 @@ def set_deadline(bot, store)
         # First try parsing as day of week + time
         if deadline_str.match?(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)
           target_day = deadline_str.split.first
-          time_str = deadline_str.sub(/^#{target_day}\s+(?:at\s+)?/i, '').strip
+          # Remove the day and any "at" words, then clean up whitespace
+          time_str = deadline_str.sub(/^#{target_day}/i, '')
+                                .gsub(/\bat\b/i, '')
+                                .gsub(/\s+/, '')
 
           # Get next occurrence of the specified day
           base_date = next_weekday(target_day)
@@ -216,10 +219,8 @@ def set_deadline(bot, store)
             next
           end
 
-          # Clean up time string and handle AM/PM
-          time_str = time_str.gsub(/\s+/, '')  # Remove all whitespace
+          # Parse time string (now handles "9AM", "9:00AM", etc.)
           if time_str.match?(/^\d+(?::\d+)?(?:AM|PM)$/i)
-            # Format: "9AM", "9:00AM", "9PM", "9:00PM"
             hour = time_str.to_i
             am_pm = time_str[-2..-1].upcase
             minute = time_str.include?(':') ? time_str.split(':')[1].to_i : 0
@@ -236,22 +237,13 @@ def set_deadline(bot, store)
               "EST"
             ).in_time_zone('Eastern Time (US & Canada)')
           else
-            event.respond "Invalid time format. Please use format like '9AM' or '9:00 PM'"
+            event.respond "Invalid time format. Please use format like '9AM' or '9PM'"
             next
           end
         else
-          event.respond "Invalid format. Please use format like 'Monday 9AM' or 'Monday at 9:00 PM'"
+          event.respond "Invalid format. Please use format like 'Monday 9AM' or 'Monday at 9AM'"
           next
         end
-
-        formatted_deadline = format_deadline(new_deadline.to_s)
-        puts "[DEBUG] Parsed deadline: #{new_deadline}"
-        puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
-      rescue => e
-        event.respond "Invalid deadline format. Please use format like 'Monday 9AM' or 'Monday at 9:00 PM'"
-        puts "[ERROR] Deadline parsing error: #{e.message}"
-        next
-      end
 
       # Update data in S3
       puts "[DEBUG] set_deadline: Attempting to store data to S3"
