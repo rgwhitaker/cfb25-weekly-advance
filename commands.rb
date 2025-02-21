@@ -201,13 +201,47 @@ def set_deadline(bot, store)
         next
       end
 
-      # Parse and validate the deadline
+      # Parse and validate the deadline with improved timezone handling
       deadline_str = deadline_parts.join(" ").strip
       begin
-        new_deadline = Time.parse(deadline_str).in_time_zone('Eastern Time (US & Canada)')
+        # First try parsing as day of week + time
+        if deadline_str.match?(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)
+          target_day = deadline_str.split.first
+          time_part = deadline_str.split[1..-1].join(" ")
+
+          # Get next occurrence of the specified day
+          base_date = next_weekday(target_day)
+          if base_date.nil?
+            event.respond "Invalid day format. Please use full day names (e.g., 'Monday')"
+            next
+          end
+
+          # Parse the time part and combine with the date
+          begin
+            time = Time.parse(time_part)
+            new_deadline = Time.new(
+              base_date.year,
+              base_date.month,
+              base_date.day,
+              time.hour,
+              time.min,
+              0,
+              "EST"
+            ).in_time_zone('Eastern Time (US & Canada)')
+          rescue ArgumentError
+            event.respond "Invalid time format. Please use format like '9:00 AM' or '14:00'"
+            next
+          end
+        else
+          # Try parsing as a full datetime
+          new_deadline = Time.parse(deadline_str).in_time_zone('Eastern Time (US & Canada)')
+        end
+
         formatted_deadline = format_deadline(new_deadline.to_s)
+        puts "[DEBUG] Parsed deadline: #{new_deadline}"
+        puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
       rescue ArgumentError
-        event.respond "Invalid deadline format. Please use a format like 'Friday 8:00 PM' or '2024-02-21 20:00'"
+        event.respond "Invalid deadline format. Please use format like 'Monday 9:00 AM' or '2024-02-21 09:00'"
         next
       end
 
