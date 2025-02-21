@@ -16,6 +16,7 @@ def register_commands(bot, store)
   advance_week(bot, store)
   set_week(bot, store)
   set_deadline(bot, store)
+  help_command(bot)
 end
 
 # Command: !initialize
@@ -269,6 +270,39 @@ def set_deadline(bot, store)
     rescue => e
       event.respond "An error occurred: #{e.message}"
       puts "[ERROR] An error occurred in set_deadline: #{e.message}\n#{e.backtrace.join("\n")}"
+    end
+  end
+
+  def help_command(bot)
+    bot.command :help do |event|
+      embed = Discordrb::Webhooks::Embed.new(
+        title: "Weekly Advance Bot Commands",
+        description: "Here are the available commands:",
+        color: 0x00FF00,
+        fields: [
+          Discordrb::Webhooks::EmbedField.new(
+            name: "!initialize",
+            value: "Creates or finds the week-advances channel and initializes the bot. Admin only.",
+            inline: false
+          ),
+          Discordrb::Webhooks::EmbedField.new(
+            name: "!advance_week [hours]",
+            value: "Advances to the next week. Optionally specify hours until deadline (default: 48).",
+            inline: false
+          ),
+          Discordrb::Webhooks::EmbedField.new(
+            name: "!set_week [week name]",
+            value: "Manually sets the current week. Example: `!set_week Week 1`",
+            inline: false
+          ),
+          Discordrb::Webhooks::EmbedField.new(
+            name: "!set_deadline [day] [time]",
+            value: "Sets a new deadline. Example: `!set_deadline Monday 9AM`",
+            inline: false
+          )
+        ]
+      )
+      event.channel.send_embed("", embed)
     end
   end
 end
