@@ -233,9 +233,11 @@ def set_deadline(bot, store)
               base_date.day,
               hour,
               minute,
-              0,
-              "EST"
-            ).in_time_zone('Eastern Time (US & Canada)')
+              0
+            ).in_time_zone('America/New_York')
+            formatted_deadline = format_deadline(new_deadline.to_s)
+            puts "[DEBUG] Parsed deadline: #{new_deadline}"
+            puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
           else
             event.respond "Invalid time format. Please use format like '9AM' or '9PM'"
             next
