@@ -203,54 +203,52 @@ def set_deadline(bot, store)
 
       # Parse and validate the deadline with improved timezone handling
       deadline_str = deadline_parts.join(" ").strip
-      begin
-        # First try parsing as day of week + time
-        if deadline_str.match?(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)
-          target_day = deadline_str.split.first
-          # Remove the day and any "at" words, then clean up whitespace
-          time_str = deadline_str.sub(/^#{target_day}/i, '')
-                                .gsub(/\bat\b/i, '')
-                                .gsub(/\s+/, '')
+      # First try parsing as day of week + time
+      if deadline_str.match?(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)
+        target_day = deadline_str.split.first
+        # Remove the day and any "at" words, then clean up whitespace
+        time_str = deadline_str.sub(/^#{target_day}/i, '')
+                              .gsub(/\bat\b/i, '')
+                              .gsub(/\s+/, '')
 
-          # Get next occurrence of the specified day
-          base_date = next_weekday(target_day)
-          if base_date.nil?
-            event.respond "Invalid day format. Please use full day names (e.g., 'Monday')"
-            next
-          end
-
-          # Parse time string (now handles "9AM", "9:00AM", etc.)
-          if time_str.match?(/^\d+(?::\d+)?(?:AM|PM)$/i)
-            hour = time_str.to_i
-            am_pm = time_str[-2..-1].upcase
-            minute = time_str.include?(':') ? time_str.split(':')[1].to_i : 0
-            hour += 12 if am_pm == 'PM' && hour != 12
-            hour = 0 if am_pm == 'AM' && hour == 12
-
-            # Create new_deadline correctly with timezone
-            new_deadline = Time.use_zone('America/New_York') do
-              Time.zone.local(
-                base_date.year,
-                base_date.month,
-                base_date.day,
-                hour,
-                minute,
-                0
-              )
-            end
-
-            formatted_deadline = format_deadline(new_deadline.to_s)
-            puts "[DEBUG] Parsed deadline: #{new_deadline}"
-            puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
-          else
-            event.respond "Invalid time format. Please use format like '9AM' or '9PM'"
-            next
-          end
-        else
-          event.respond "Invalid format. Please use format like 'Monday 9AM' or 'Monday at 9AM'"
+        # Get next occurrence of the specified day
+        base_date = next_weekday(target_day)
+        if base_date.nil?
+          event.respond "Invalid day format. Please use full day names (e.g., 'Monday')"
           next
         end
+
+        # Parse time string (now handles "9AM", "9:00AM", etc.)
+        if time_str.match?(/^\d+(?::\d+)?(?:AM|PM)$/i)
+          hour = time_str.to_i
+          am_pm = time_str[-2..-1].upcase
+          minute = time_str.include?(':') ? time_str.split(':')[1].to_i : 0
+          hour += 12 if am_pm == 'PM' && hour != 12
+          hour = 0 if am_pm == 'AM' && hour == 12
+
+          # Create new_deadline correctly with timezone
+          new_deadline = Time.use_zone('America/New_York') do
+            Time.zone.local(
+              base_date.year,
+              base_date.month,
+              base_date.day,
+              hour,
+              minute,
+              0
+            )
+          end
+
+          formatted_deadline = format_deadline(new_deadline.to_s)
+          puts "[DEBUG] Parsed deadline: #{new_deadline}"
+          puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
+        else
+          event.respond "Invalid time format. Please use format like '9AM' or '9PM'"
+          next
         end
+      else
+        event.respond "Invalid format. Please use format like 'Monday 9AM' or 'Monday at 9AM'"
+        next
+      end
 
       # Update data in S3
       puts "[DEBUG] set_deadline: Attempting to store data to S3"
