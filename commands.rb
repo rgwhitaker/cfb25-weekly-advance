@@ -207,7 +207,7 @@ def set_deadline(bot, store)
         # First try parsing as day of week + time
         if deadline_str.match?(/^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)
           target_day = deadline_str.split.first
-          time_part = deadline_str.split[1..-1].join(" ")
+          time_str = deadline_str.sub(/^#{target_day}\s+(?:at\s+)?/i, '').strip
 
           # Get next occurrence of the specified day
           base_date = next_weekday(target_day)
@@ -216,32 +216,40 @@ def set_deadline(bot, store)
             next
           end
 
-          # Parse the time part and combine with the date
-          begin
-            time = Time.parse(time_part)
+          # Clean up time string and handle AM/PM
+          time_str = time_str.gsub(/\s+/, '')  # Remove all whitespace
+          if time_str.match?(/^\d+(?::\d+)?(?:AM|PM)$/i)
+            # Format: "9AM", "9:00AM", "9PM", "9:00PM"
+            hour = time_str.to_i
+            am_pm = time_str[-2..-1].upcase
+            minute = time_str.include?(':') ? time_str.split(':')[1].to_i : 0
+            hour += 12 if am_pm == 'PM' && hour != 12
+            hour = 0 if am_pm == 'AM' && hour == 12
+
             new_deadline = Time.new(
               base_date.year,
               base_date.month,
               base_date.day,
-              time.hour,
-              time.min,
+              hour,
+              minute,
               0,
               "EST"
             ).in_time_zone('Eastern Time (US & Canada)')
-          rescue ArgumentError
-            event.respond "Invalid time format. Please use format like '9:00 AM' or '14:00'"
+          else
+            event.respond "Invalid time format. Please use format like '9AM' or '9:00 PM'"
             next
           end
         else
-          # Try parsing as a full datetime
-          new_deadline = Time.parse(deadline_str).in_time_zone('Eastern Time (US & Canada)')
+          event.respond "Invalid format. Please use format like 'Monday 9AM' or 'Monday at 9:00 PM'"
+          next
         end
 
         formatted_deadline = format_deadline(new_deadline.to_s)
         puts "[DEBUG] Parsed deadline: #{new_deadline}"
         puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
-      rescue ArgumentError
-        event.respond "Invalid deadline format. Please use format like 'Monday 9:00 AM' or '2024-02-21 09:00'"
+      rescue => e
+        event.respond "Invalid deadline format. Please use format like 'Monday 9AM' or 'Monday at 9:00 PM'"
+        puts "[ERROR] Deadline parsing error: #{e.message}"
         next
       end
 
