@@ -16,9 +16,6 @@ def register_commands(bot, store)
   advance_week(bot, store)
   set_week(bot, store)
   set_deadline(bot, store)
-  status_week_advances(bot, store)
-  reset_week_advances(bot, store)
-  debug_s3_store(bot, store)
 end
 
 # Command: !initialize
@@ -272,64 +269,6 @@ def set_deadline(bot, store)
     rescue => e
       event.respond "An error occurred: #{e.message}"
       puts "[ERROR] An error occurred in set_deadline: #{e.message}\n#{e.backtrace.join("\n")}"
-    end
-  end
-end
-
-# Command: !status
-def status_week_advances(bot, store)
-  bot.command(:status) do |event|
-    saved_message_id = store.transaction { store[:message_id] }
-    channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
-    status = "📊 **Bot Status**:\n"
-    status += "- Channel: `#{channel.nil? ? 'Not Found' : channel.name}`\n"
-    status += "- Stored Message ID: `#{saved_message_id || 'None'}`\n"
-
-    if saved_message_id && channel
-      begin
-        channel.load_message(saved_message_id.to_s)
-        status += "- Message Status: ✅ Found\n"
-      rescue Discordrb::Errors::UnknownMessage
-        status += "- Message Status: ❌ Not Found\n"
-      rescue StandardError => e
-        status += "- Message Status: ❌ Error: #{e.message}\n"
-      end
-    end
-
-    event.respond(status)
-  end
-end
-
-# Command: !reset
-def reset_week_advances(bot, store)
-  bot.command(:reset) do |event|
-    unless event.user.has_permission?(:administrator) || event.user.id == event.server.owner.id
-      event.respond("❌ You don't have permissions to reset the bot.")
-      next
-    end
-
-    store.transaction { store.clear }
-    event.respond("✅ Bot state has been reset. Please run `!initialize` to set it up again.")
-  end
-end
-
-def debug_s3_store(bot, store)
-  bot.command(:debug_store) do |event|
-    return unless event.user.permission?(:administrator)
-
-    begin
-      raw_data = store.load_store('store.yml')
-      event.respond "```\nS3 Store Contents:\n#{raw_data.inspect}\n```"
-
-      if raw_data && raw_data[:message_id]
-        channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
-        if channel
-          message = channel.load_message(raw_data[:message_id])
-          event.respond "Message check: #{message ? '✅ Found' : '❌ Not Found'}"
-        end
-      end
-    rescue => e
-      event.respond "Error reading store: #{e.message}"
     end
   end
 end
