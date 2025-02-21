@@ -16,6 +16,7 @@ def register_commands(bot, store)
   set_deadline(bot, store)
   status_week_advances(bot, store)
   reset_week_advances(bot, store)
+  debug_s3_store(bot, store)
 end
 
 # Command: !initialize
@@ -187,5 +188,26 @@ def reset_week_advances(bot, store)
 
     store.transaction { store.clear }
     event.respond("✅ Bot state has been reset. Please run `!initialize` to set it up again.")
+  end
+end
+
+def debug_s3_store(bot, store)
+  bot.command(:debug_store) do |event|
+    return unless event.user.permission?(:administrator)
+
+    begin
+      raw_data = store.load_store('store.yml')
+      event.respond "```\nS3 Store Contents:\n#{raw_data.inspect}\n```"
+
+      if raw_data && raw_data[:message_id]
+        channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+        if channel
+          message = channel.load_message(raw_data[:message_id])
+          event.respond "Message check: #{message ? '✅ Found' : '❌ Not Found'}"
+        end
+      end
+    rescue => e
+      event.respond "Error reading store: #{e.message}"
+    end
   end
 end

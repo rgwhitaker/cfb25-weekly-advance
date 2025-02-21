@@ -141,16 +141,37 @@ end
 
 def load_data_from_s3(store)
   puts "[DEBUG] load_data_from_s3: Starting data load from S3"
+
+  # First, explicitly load the YAML from S3
+  raw_data = store.load_store('store.yml')
+  puts "[DEBUG] Raw YAML data from S3: #{raw_data.inspect}"
+
+  # If raw_data is nil or empty, return early
+  if raw_data.nil? || raw_data.empty?
+    puts "[ERROR] No data found in S3 store"
+    return [nil, nil, nil]
+  end
+
   store.transaction do |data|
-    puts "[DEBUG] Raw data from S3: #{data.inspect}"
+    message_id = data[:message_id]
+    if message_id.nil?
+      puts "[ERROR] No message_id found in store data"
+      return [nil, nil, nil]
+    end
+
     current_week_index = data[:current_week_index] || 0
     current_deadline = data[:current_deadline] || "No deadline set"
-    message_id = data[:message_id]
-    puts "[DEBUG] Loaded data from S3: current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+
+    puts "[DEBUG] Loaded data from S3:"
+    puts "- message_id: #{message_id}"
+    puts "- current_week_index: #{current_week_index}"
+    puts "- current_deadline: #{current_deadline}"
+
     [current_week_index, current_deadline, message_id]
   end
 rescue => e
-  puts "[ERROR] Failed to load data from S3: #{e.message}\n#{e.backtrace.join("\n")}"
+  puts "[ERROR] Failed to load data from S3: #{e.message}"
+  puts "[ERROR] Backtrace: #{e.backtrace[0..5].join("\n")}"
   [nil, nil, nil]
 end
 
