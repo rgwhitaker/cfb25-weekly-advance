@@ -174,9 +174,64 @@ end
 
 # Command: !set_deadline
 def set_deadline(bot, store)
-  bot.command :set_deadline do |event, *args|
-    deadline_input = args.join(" ").strip
-    update_deadline(event, deadline_input, store) # Use a helper for deadline logic
+  bot.command :set_deadline do |event, *deadline_parts|
+    begin
+      # Load data from S3 bucket
+      puts "[DEBUG] set_deadline: Attempting to load data from S3"
+      current_week_index, current_deadline, message_id = load_data_from_s3(store)
+      puts "[DEBUG] set_deadline: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+
+      # Ensure message ID exists
+      if message_id.nil?
+        event.respond "Error: No existing message found. Please run `!initialize` first."
+        puts "[ERROR] No existing message found: message_id=#{message_id.inspect}"
+        next
+      end
+
+      # Find the channel and message
+      channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+      unless channel
+        event.respond "The 'week-advances' channel was not found."
+        next
+      end
+
+      message = channel.load_message(message_id)
+      unless message
+        event.respond "The message with ID #{message_id} was not found. Please run `!initialize` first."
+        next
+      end
+
+      # Parse and validate the deadline
+      deadline_str = deadline_parts.join(" ").strip
+      begin
+        new_deadline = Time.parse(deadline_str).in_time_zone('Eastern Time (US & Canada)')
+        formatted_deadline = format_deadline(new_deadline.to_s)
+      rescue ArgumentError
+        event.respond "Invalid deadline format. Please use a format like 'Friday 8:00 PM' or '2024-02-21 20:00'"
+        next
+      end
+
+      # Update data in S3
+      puts "[DEBUG] set_deadline: Attempting to store data to S3"
+      store_data_to_s3(store, current_week_index, formatted_deadline, message.id)
+      puts "[DEBUG] set_deadline: Stored data with new deadline: #{formatted_deadline}"
+
+      # Update the message
+      current_week = WEEKS[current_week_index]
+      description = "🏈 The deadline to complete your recruiting and games is #{formatted_deadline}. 🏈"
+
+      begin
+        update_embed_message(message, "#{current_week} has started!", description, message.embeds.first)
+        event.respond "Deadline manually set to #{formatted_deadline}."
+        link = message_link(event.server.id, message.channel.id, message.id)
+        notify_lobby(event.server, "deadline has been manually set", formatted_deadline, link)
+      rescue Discordrb::Errors::NoPermission
+        event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+      end
+    rescue => e
+      event.respond "An error occurred: #{e.message}"
+      puts "[ERROR] An error occurred in set_deadline: #{e.message}\n#{e.backtrace.join("\n")}"
+    end
   end
 end
 
