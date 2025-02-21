@@ -116,32 +116,58 @@ end
 # Command: !set_week
 def set_week(bot, store)
   bot.command :set_week do |event, *week_parts|
-    message = get_or_create_week_message(event, store)
-    unless message
-      event.respond "The 'week-advances' channel was not found or unable to create the message."
-      next
-    end
-
-    week = week_parts.join(" ").strip
-
     begin
-      current_week_index = find_week_index(week) # Helper method to find the week index
-      store.transaction do
-        store[:current_week_index] = current_week_index
+      # Load current data from S3
+      puts "[DEBUG] set_week: Attempting to load data from S3"
+      current_week_index, current_deadline, message_id = load_data_from_s3(store)
+      puts "[DEBUG] set_week: Loaded data - current_week_index=#{current_week_index.inspect}, current_deadline=#{current_deadline.inspect}, message_id=#{message_id.inspect}"
+
+      # Ensure message ID exists
+      if message_id.nil?
+        event.respond "Error: No existing message found. Please run `!initialize` first."
+        puts "[ERROR] No existing message found: message_id=#{message_id.inspect}"
+        next
       end
 
-      # Update embed with unchanged deadline and new week
-      current_week_name = WEEKS[current_week_index]
-      existing_deadline = store.transaction { store[:current_deadline] || "No deadline set" }
-      new_title = "#{current_week_name} has started!"
-      new_description = "🏈 The deadline to complete your recruiting and games is #{existing_deadline}. 🏈"
+      # Find the channel and message
+      channel = event.server.channels.find { |ch| ch.name == 'week-advances' }
+      unless channel
+        event.respond "The 'week-advances' channel was not found."
+        next
+      end
 
-      update_embed_message(message, new_title, new_description, message.embeds.first)
-      event.respond "Current week set to **#{current_week_name}**, and the deadline remains unchanged."
-      link = message_link(event.server.id, message.channel.id, message.id)
-      notify_lobby(event.server, "current week has been manually set to **#{current_week_name}**", existing_deadline, link)
+      message = channel.load_message(message_id)
+      unless message
+        event.respond "The message with ID #{message_id} was not found. Please run `!initialize` first."
+        next
+      end
+
+      # Find the week index for the requested week
+      week = week_parts.join(" ").strip
+      new_week_index = WEEKS.index(week)
+      unless new_week_index
+        event.respond "Invalid week. Please use one of: #{WEEKS.join(', ')}"
+        next
+      end
+
+      # Update data in S3
+      puts "[DEBUG] set_week: Attempting to store data to S3"
+      store_data_to_s3(store, new_week_index, current_deadline || "No deadline set", message.id)
+      puts "[DEBUG] set_week: Stored data with new week index: #{new_week_index}"
+
+      # Update the message
+      description = "🏈 The deadline to complete your recruiting and games is #{current_deadline || 'not set'}. 🏈"
+      begin
+        update_embed_message(message, "#{week} has started!", description, message.embeds.first)
+        event.respond "Week manually set to #{week}."
+        link = message_link(event.server.id, message.channel.id, message.id)
+        notify_lobby(event.server, "week has been manually set to **#{week}**", current_deadline || "not set", link)
+      rescue Discordrb::Errors::NoPermission
+        event.respond "I don't have permission to edit messages in the 'week-advances' channel. Please check my permissions."
+      end
     rescue => e
-      event.respond "An error occurred while setting the current week: #{e.message}"
+      event.respond "An error occurred: #{e.message}"
+      puts "[ERROR] An error occurred in set_week: #{e.message}\n#{e.backtrace.join("\n")}"
     end
   end
 end
