@@ -227,14 +227,18 @@ def set_deadline(bot, store)
             hour += 12 if am_pm == 'PM' && hour != 12
             hour = 0 if am_pm == 'AM' && hour == 12
 
-            new_deadline = Time.new(
-              base_date.year,
-              base_date.month,
-              base_date.day,
-              hour,
-              minute,
-              0
-            ).in_time_zone('America/New_York')
+            # Create new_deadline correctly with timezone
+            new_deadline = Time.use_zone('America/New_York') do
+              Time.zone.local(
+                base_date.year,
+                base_date.month,
+                base_date.day,
+                hour,
+                minute,
+                0
+              )
+            end
+
             formatted_deadline = format_deadline(new_deadline.to_s)
             puts "[DEBUG] Parsed deadline: #{new_deadline}"
             puts "[DEBUG] Formatted deadline: #{formatted_deadline}"
