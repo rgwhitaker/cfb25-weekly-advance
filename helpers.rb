@@ -2,6 +2,8 @@
 require 'discordrb'
 require 'date'
 require 'time'
+require 'active_support'
+require 'active_support/core_ext/numeric/time'
 
 
 # Helper function to calculate advance time while skipping Saturdays
