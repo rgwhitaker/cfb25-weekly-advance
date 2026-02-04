@@ -43,3 +43,21 @@ EMBED_IMAGE_URL = 'https://www.operationsports.com/wp-content/uploads/2024/02/IM
 
 # Footer text and icon URL
 FOOTER_TEXT = "2024 Florida Gators | 2025 Florida Gators | 2027 Arizona State Sun Devils"
+
+# Define which weeks are non-game weeks (24 hour default instead of 48)
+NON_GAME_WEEKS = [
+  "Preseason",
+  "End of Season Recap",
+  "Players Leaving",
+  "Off-Season Recruiting Week 1",
+  "Off-Season Recruiting Week 2",
+  "Off-Season Recruiting Week 3",
+  "Off-Season Recruiting Week 4",
+  "National Signing Day",
+  "Training Results",
+  "Off-Season"
+]
+
+# Default deadline durations in hours
+DEFAULT_NON_GAME_HOURS = 24
+DEFAULT_GAME_HOURS = 48
