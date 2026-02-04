@@ -12,7 +12,7 @@ The **Weekly Advance Bot** is a Discord bot designed to manage and automate the 
   - Each time the `!advance_week` command is used, the bot advances to the next week and notifies all members.
 
 - **Deadline Calculation:**
-  - The bot calculates the deadline for game completion by adding 48 hours to the current time.
+  - The bot calculates the deadline for game completion by adding 48 hours to the current time for game weeks, or 24 hours for non-game weeks (such as recruiting weeks and off-season periods).
   - Provides a clear and precise deadline in the notification message.
 
 - **User-Friendly Commands:**

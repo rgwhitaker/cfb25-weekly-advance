@@ -58,7 +58,7 @@ end
 
 # Command: !advance_week
 def advance_week(bot, store)
-  bot.command :advance_week do |event, duration_in_hours = '48'|
+  bot.command :advance_week do |event, duration_in_hours = nil|
     begin
       # Load data from S3 bucket
       puts "[DEBUG] advance_week: Attempting to load data from S3"
@@ -85,17 +85,25 @@ def advance_week(bot, store)
         next
       end
 
+      # Calculate the next week index
+      current_week_index = (current_week_index + 1) % WEEKS.length
+      next_week_name = WEEKS[current_week_index]
+
+      # Determine default duration based on whether next week is a game week or not
+      if duration_in_hours.nil?
+        duration_in_hours = NON_GAME_WEEKS.include?(next_week_name) ? '24' : '48'
+        puts "[DEBUG] advance_week: Auto-selected duration #{duration_in_hours} hours for #{next_week_name}"
+      end
+
       current_time = Time.now.in_time_zone('Eastern Time (US & Canada)')
       advance_time = calculate_advance_time(current_time, duration_in_hours)
       advance_time_str = format_deadline(advance_time.to_s)
-      current_week_index = (current_week_index + 1) % WEEKS.length
 
       # Update data in S3 bucket
       puts "[DEBUG] advance_week: Attempting to store data to S3"
       store_data_to_s3(store, current_week_index, advance_time_str, message.id)
       puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
 
-      next_week_name = WEEKS[current_week_index]
       description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
 
       begin
@@ -287,7 +295,7 @@ def set_deadline(bot, store)
           ),
           Discordrb::Webhooks::EmbedField.new(
             name: "!advance_week [hours]",
-            value: "Advances to the next week. Optionally specify hours until deadline (default: 48).",
+            value: "Advances to the next week. Optionally specify hours until deadline (default: 24 for non-game weeks, 48 for game weeks).",
             inline: false
           ),
           Discordrb::Webhooks::EmbedField.new(
