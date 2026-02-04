@@ -91,7 +91,7 @@ def advance_week(bot, store)
 
       # Determine default duration based on whether next week is a game week or not
       if duration_in_hours.nil?
-        duration_in_hours = NON_GAME_WEEKS.include?(next_week_name) ? '24' : '48'
+        duration_in_hours = NON_GAME_WEEKS.include?(next_week_name) ? DEFAULT_NON_GAME_HOURS : DEFAULT_GAME_HOURS
         puts "[DEBUG] advance_week: Auto-selected duration #{duration_in_hours} hours for #{next_week_name}"
       end
 

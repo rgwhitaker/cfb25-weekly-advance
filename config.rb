@@ -57,3 +57,7 @@ NON_GAME_WEEKS = [
   "Training Results",
   "Off-Season"
 ]
+
+# Default deadline durations in hours
+DEFAULT_NON_GAME_HOURS = '24'
+DEFAULT_GAME_HOURS = '48'
