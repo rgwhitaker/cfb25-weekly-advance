@@ -25,6 +25,7 @@ WEEKS = [
   "Bowl Week 1",
   "Bowl Week 2",
   "Bowl Week 3",
+  "Bowl Week 4",
   "National Championship",
   "End of Season Recap",
   "Players Leaving",
