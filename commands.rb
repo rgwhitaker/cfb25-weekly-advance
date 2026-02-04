@@ -86,8 +86,8 @@ def advance_week(bot, store)
       end
 
       # Calculate the next week index
-      current_week_index = (current_week_index + 1) % WEEKS.length
-      next_week_name = WEEKS[current_week_index]
+      next_week_index = (current_week_index + 1) % WEEKS.length
+      next_week_name = WEEKS[next_week_index]
 
       # Determine default duration based on whether next week is a game week or not
       if duration_in_hours.nil?
@@ -101,8 +101,8 @@ def advance_week(bot, store)
 
       # Update data in S3 bucket
       puts "[DEBUG] advance_week: Attempting to store data to S3"
-      store_data_to_s3(store, current_week_index, advance_time_str, message.id)
-      puts "[DEBUG] advance_week: Stored data - current_week_index=#{current_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
+      store_data_to_s3(store, next_week_index, advance_time_str, message.id)
+      puts "[DEBUG] advance_week: Stored data - next_week_index=#{next_week_index.inspect}, advance_time_str=#{advance_time_str.inspect}, message_id=#{message.id.inspect}"
 
       description = "🏈 The deadline to complete your recruiting and games is #{advance_time_str}. 🏈"
 
